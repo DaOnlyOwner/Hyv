@@ -2,11 +2,14 @@
 
 #include "flecs.h"
 
-namespace physics
+namespace hyv
 {
-	struct physics_module
+	namespace physics
 	{
-	public:
-		physics_module(flecs::world& world);
-	};
+		struct physics_module
+		{
+		public:
+			physics_module(flecs::world& world);
+		};
+	}
 }

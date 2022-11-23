@@ -1,17 +1,14 @@
 #pragma once
+#include "definitions.h"
 
-
-
-namespace rendering
+namespace hyv
 {
-	struct camera
+	namespace rendering
 	{
+		struct camera
+		{
 
-	};
+		};
 
-
-	struct mesh
-	{
-
-	};
+	}
 }

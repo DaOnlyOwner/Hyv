@@ -2,9 +2,12 @@
 
 #include "glm/glm.hpp"
 
-namespace pyhsics
+namespace hyv
 {
-	typedef glm::vec3 position;
-	typedef glm::quat rotation;
-	typedef glm::vec3 scale;
+	namespace pyhsics
+	{
+		typedef glm::vec3 position;
+		typedef glm::quat rotation;
+		typedef glm::vec3 scale;
+	}
 }

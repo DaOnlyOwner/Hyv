@@ -2,11 +2,14 @@
 
 #include "flecs.h"
 
-namespace rendering
+namespace hyv
 {
-	struct rendering_module
+	namespace rendering
 	{
-	public:
-		rendering_module(flecs::world& world);
-	};
+		struct rendering_module
+		{
+		public:
+			rendering_module(flecs::world& world);
+		};
+	}
 }
