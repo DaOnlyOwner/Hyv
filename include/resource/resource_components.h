@@ -19,6 +19,8 @@ namespace hyv
 			u64 offsetVertex = 0;
 		};
 
+		typedef std::string static_mesh_name;
+
 		struct material
 		{
 

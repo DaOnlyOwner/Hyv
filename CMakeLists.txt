@@ -1,28 +1,42 @@
 cmake_minimum_required(VERSION 3.8)
 project(Hyv)
 
-if(WIN32)
-	set(PLATFORM "PLATFORM_WIN32")
-elseif(LINUX)
-	set(PLATFORM "PLATFORM_LINUX")
-elseif(APPLE)
-	set(PLATFORM "PLATFORM_MACOS")
-else()
-	message(FATAL_ERROR "target platform unknown")
-endif()
-
-message(STATUS "building for ${PLATFORM}")
-
 file(GLOB_RECURSE SRC src/*.cpp)
 file(GLOB_RECURSE INC include/*.h)
+
+add_subdirectory(lib/DiligentCore)
+add_subdirectory(lib/DiligentTools)
+add_subdirectory(lib/glm)
+add_subdirectory(lib/assimp)
+add_subdirectory(lib/fmt)
+add_subdirectory(lib/flecs)
+add_subdirectory(lib/glfw)
 	
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+add_executable(Hyv ${SRC} ${INC} dev/dev.cpp lib/DiligentTools/ThirdParty/imgui/backends/imgui_impl_glfw.cpp)
 
-add_executable(Hyv ${SRC} ${INC} dev/dev.cpp)
+target_include_directories(Hyv PRIVATE lib/DiligentCore lib/DiligentTools/TextureLoader/interface lib/DiligentTools/Imgui/interface
+lib/DiligentTools/ThirdParty/imgui/backends)
 
-conan_basic_setup(Hyv)
+target_link_libraries(Hyv
+PRIVATE
+    Diligent-GraphicsEngineD3D12-shared
+    Diligent-GraphicsEngineVk-shared
+    Diligent-Common
+    Diligent-GraphicsTools
+    Diligent-TextureLoader
+    Diligent-Imgui
+    fmt
+    glm
+    assimp::assimp
+    glfw
+    flecs_static
+)
+copy_required_dlls(Hyv)
+
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Hyv)
+
 target_compile_features(Hyv PUBLIC cxx_std_17)
 
-target_compile_definitions(Hyv PRIVATE ${PLATFORM})
-target_link_libraries(Hyv ${CONAN_LIBS})
+target_compile_options(Hyv PRIVATE -DUNICODE -DENGINE_DLL -DRES=\"${CMAKE_SOURCE_DIR}/resources\" -DSHADER_RES=\"${CMAKE_SOURCE_DIR}/resources/shaders\")
+
 target_include_directories(Hyv PUBLIC include)

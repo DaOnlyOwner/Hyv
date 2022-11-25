@@ -1,9 +1,7 @@
 #include "resource/loader.h"
 #include "global.h"
 #include "assimp/matrix4x4.h"
-#include "assimp/Importer.hpp"
 #include "definitions.h"
-#include "assimp/mesh.h"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
 
@@ -75,7 +73,6 @@ namespace
 
 		auto mb = world.get_mut<hyv::resource::mesh_buffer>();
 		mb->name_to_mesh[std::string(name)] = m;
-		world.modified<hyv::resource::mesh_buffer>();
 	}
 
 }
@@ -101,6 +98,13 @@ void hyv::resource::loader::process_node_static_mesh(const aiNode& node, const a
 	}
 }
 
+hyv::resource::loader::loader(flecs::world& world) : world(world) {
+	auto mb = world.get_mut<mesh_buffer>();
+	mb->index_buffer.Release();
+	mb->vertex_buffer.Release();
+	mb->name_to_mesh.clear();
+}
+
 void hyv::resource::loader::load_static_mesh(const char* file, static_mesh_loader_options options)
 {
 	Assimp::Importer imp;
@@ -110,7 +114,7 @@ void hyv::resource::loader::load_static_mesh(const char* file, static_mesh_loade
 		aiProcess_GenNormals |
 		aiProcess_CalcTangentSpace |
 		aiProcess_FlipWindingOrder |
-		(options.optimize ? aiProcess_OptimizeMeshes | aiProcess_OptimizeGraph : 0) |
+		(options.optimize ? aiProcess_OptimizeMeshes : 0) |
 		(options.merge ? aiProcess_PreTransformVertices : 0)
 		;
 
@@ -150,5 +154,6 @@ hyv::resource::loader::~loader()
 	idata.pData = indices.data();
 	idata.DataSize = ibd.Size;
 	Dev->CreateBuffer(ibd, &idata, &mb->index_buffer);
+	world.modified<mesh_buffer>();
 }
 

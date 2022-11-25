@@ -3,9 +3,9 @@
 #include <vector>
 #include "resource_components.h"
 #include "definitions.h"
+#include "assimp/Importer.hpp"
+#include "assimp/mesh.h"
 
-class aiNode;
-class aiScene;
 
 namespace hyv
 {
@@ -26,7 +26,7 @@ namespace hyv
 		{
 		public:
 
-			loader(flecs::world& world) : world(world){}
+			loader(flecs::world& world);
 
 			/// <summary>
 			/// Loads the specified static mesh into the world

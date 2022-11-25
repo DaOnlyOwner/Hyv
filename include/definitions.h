@@ -35,4 +35,26 @@ namespace hyv
 		glm::vec2 uv;
 	};
 
+	struct init_info
+	{
+		enum class RenderBackend
+		{
+#if D3D12_SUPPORTED
+			D3D12,
+#endif
+
+#if VULKAN_SUPPORTED
+			Vulkan,
+#endif
+#if !D3D12_SUPPORTED && !VULKAN_SUPPORTED
+			NoBackendSupported
+#endif
+		};
+		bool enableDebugLayers = true;
+		RenderBackend backend = RenderBackend::Vulkan;
+		int width = 800, height = 600;
+		std::string title;
+
+	};
+
 }
