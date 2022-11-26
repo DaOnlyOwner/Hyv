@@ -7,7 +7,7 @@
 #include "ImGuiImplDiligent.hpp"
 #include "ImGuiUtils.hpp"
 #include "windowing/windowing.h"
-
+#include "flecs.h"
 
 namespace hyv
 {
@@ -23,6 +23,8 @@ namespace hyv
 			float clear_color[4];
 			static rendering& inst(const init_info& info, windowing::windowing& w);
 			static rendering& inst();
+
+			int num_threads() { return DeferredCtxts.size(); }
 
 		private:
 			rendering(const init_info& info, windowing::windowing& w);

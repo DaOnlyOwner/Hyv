@@ -6,10 +6,10 @@ namespace hyv
 {
 	namespace rendering
 	{
-		struct rendering_module
+		struct static_mesh_renderer_module
 		{
 		public:
-			rendering_module(flecs::world& world);
+			static_mesh_renderer_module(flecs::world& world);
 		};
 	}
 }

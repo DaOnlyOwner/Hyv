@@ -1,4 +1,5 @@
 #include "rendering/rendering.h"
+#include "rendering/render_systems.h"
 #include <utility>
 
 #if PLATFORM_WIN32
@@ -29,7 +30,7 @@ Diligent::RefCntAutoPtr<Diligent::IDeviceContext> hyv::Imm;
 Diligent::RefCntAutoPtr<Diligent::ISwapChain> hyv::SwapChain;
 Diligent::RefCntAutoPtr<Diligent::IRenderDevice> hyv::Dev;
 Diligent::RefCntAutoPtr<Diligent::IShaderSourceInputStreamFactory> hyv::ShaderStream;
-
+std::vector<Diligent::RefCntAutoPtr<Diligent::ICommandList>> hyv::CmdLists;
 
 void callback(Diligent::DEBUG_MESSAGE_SEVERITY Severity,
 	const char* Message,
@@ -172,6 +173,9 @@ void hyv::rendering::rendering::init_diligent(GLFWwindow* window, const init_inf
 	{
 		DeferredCtxts[i - 1] = ctxts[i];
 	}
+
+	
+
 	//Renderer::Inst().Init(device, imm, swapChain,streamFactory);
 	imguiImpl = std::make_unique<dl::ImGuiImplDiligent>(Dev, SwapChain->GetDesc().ColorBufferFormat, SwapChain->GetDesc().DepthBufferFormat);
 }

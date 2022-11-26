@@ -26,6 +26,10 @@ namespace hyv
 	typedef int32_t i32;
 	typedef int64_t i64;
 
+#define DIFFUSE_FORMAT dl::TEX_FORMAT_RGBA8_UNORM;
+#define NORMAL_FORMAT dl::TEX_FORMAT_RGBA16_FLOAT;
+#define DEPTH_FORMAT dl::TEX_FORMAT_D32_FLOAT;
+
 	struct vertex
 	{
 		glm::vec3 pos;
