@@ -28,15 +28,24 @@ namespace hyv
 			template<typename T>
 			T get(const std::string& name)
 			{
-				static_assert(std::is_same_v<T, static_mesh_cpu> || std::is_same_v<T, static_mesh_gpu>, "The type is not supported by the resource class");
+				static_assert(std::is_same_v<T, static_mesh_cpu> ||
+					std::is_same_v<T, static_mesh_gpu> ||
+					std::is_same_v<T, material>, "The type is not supported by the resource class");
 				if constexpr (std::is_same<T, static_mesh_cpu>::value || std::is_same<T, static_mesh_gpu>::value)
 				{
 					return get_static_mesh<T>(name);
 				}
 
+				else if (std::is_same<T, material>::value)
+				{
+					return get_material(name);
+				}
+
 				return T{};
 
 			}
+
+			void set(const std::string& name, material& mat);
 
 		private:
 			template<typename T>
@@ -53,7 +62,11 @@ namespace hyv
 				HYV_NON_FATAL_ERROR("No static mesh named {} in the resources", name);
 				return T{};
 			}
+
+			material get_material(const std::string& name);
+
 			std::unordered_map<std::string, static_mesh_bundle> name_to_static_mesh;
+			std::unordered_map<std::string, material> name_to_material;
 			//std::unordered_map<std::string, std::string> name_to_file;
 			flecs::world& world;
 

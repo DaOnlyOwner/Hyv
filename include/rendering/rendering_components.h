@@ -3,6 +3,7 @@
 #include "Texture.h"
 #include <vector>
 #include "rendering/buffer.h"
+#include "pipeline.h"
 
 namespace hyv
 {
@@ -28,10 +29,34 @@ namespace hyv
 			glm::mat4 projection;
 		};
 
-		struct material
+		struct MainCameraTag{};
+
+		struct geometry_pass_constants
 		{
-			dl::RefCntAutoPtr<dl::IPipelineState> pipeline;
+			glm::mat4 model; // 4x4 * sizeof(float) = 16 * 4
+			glm::mat4 normal; // 4 * 4 = 16 * 4
+			glm::mat4 MVP; // 4 * 4  = 16 * 4  
+		};
+
+		typedef std::vector<uniform_buffer<geometry_pass_constants>> geometry_pass_constants_vector;
+
+		struct geometry_pass_pipeline_bundle
+		{
+			graphics_pipeline pso;
 			dl::RefCntAutoPtr<dl::IShaderResourceBinding> SRB;
+			uniform_buffer<geometry_pass_constants> consts;
+		};
+
+		struct composite_pass_pipeline_bundle
+		{
+			graphics_pipeline pso;
+			dl::RefCntAutoPtr<dl::IShaderResourceBinding> SRB;
+		};
+
+		struct global_mesh_buffer
+		{
+			dl::RefCntAutoPtr<dl::IBuffer> vertex_buffer;
+			dl::RefCntAutoPtr<dl::IBuffer> index_buffer;
 		};
 
 

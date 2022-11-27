@@ -74,8 +74,8 @@ void hyv::rendering::rendering::new_frame()
 		Imm->TransitionResourceStates((u32)Barriers.size(), Barriers.data());
 	}
 
-	Imm->ClearRenderTarget(SwapChain->GetCurrentBackBufferRTV(), clear_color, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-	Imm->ClearDepthStencil(SwapChain->GetDepthBufferDSV(), dl::CLEAR_DEPTH_FLAG, 1.f, 0, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+	Imm->ClearRenderTarget(SwapChain->GetCurrentBackBufferRTV(), clear_color, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+	Imm->ClearDepthStencil(SwapChain->GetDepthBufferDSV(), dl::CLEAR_DEPTH_FLAG, 1.f, 0, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 	ImGui_ImplGlfw_NewFrame();
 	imguiImpl->NewFrame(SwapChain->GetDesc().Width, SwapChain->GetDesc().Height, SwapChain->GetDesc().PreTransform);
 }
@@ -84,7 +84,7 @@ void hyv::rendering::rendering::end_frame()
 {
 	auto* rtv = SwapChain->GetCurrentBackBufferRTV();
 	auto* dsv = SwapChain->GetDepthBufferDSV();
-	Imm->SetRenderTargets(1, &rtv, dsv, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+	Imm->SetRenderTargets(1, &rtv, dsv, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 	imguiImpl->Render(Imm);
 	Imm->Flush();
 	Imm->FinishFrame();

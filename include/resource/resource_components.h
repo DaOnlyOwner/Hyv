@@ -26,12 +26,6 @@ namespace hyv
 			std::shared_ptr<std::vector<u32>> indices;
 		};
 
-		struct global_mesh_buffer
-		{
-			dl::RefCntAutoPtr<dl::IBuffer> vertex_buffer;
-			dl::RefCntAutoPtr<dl::IBuffer> index_buffer;
-		};
-
 		struct material
 		{
 

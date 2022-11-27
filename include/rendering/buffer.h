@@ -157,8 +157,8 @@ namespace hyv
 		class uniform_buffer
 		{
 		public:
-			static_assert(sizeof(T) % 16 == 0, "A uniform buffer has to be a multiple of 16 bytes")
-			uniform_buffer() = default;
+			static_assert(sizeof(T) % 16 == 0, "A uniform buffer has to be a multiple of 16 bytes");
+			uniform_buffer() {}
 			uniform_buffer(const std::string& name, dl::USAGE usage = dl::USAGE_DYNAMIC)
 			{
 				dl::BufferDesc bdesc;
@@ -168,7 +168,10 @@ namespace hyv
 				bdesc.Size = sizeof(T);
 				bdesc.CPUAccessFlags = usage == dl::USAGE_DYNAMIC ? dl::CPU_ACCESS_WRITE : dl::CPU_ACCESS_NONE;
 				Dev->CreateBuffer(bdesc, nullptr, &buffer_handle);
-				Barriers.emplace_back(buffer_handle, dl::RESOURCE_STATE_UNKNOWN, dl::RESOURCE_STATE_CONSTANT_BUFFER);
+				Barriers.emplace_back(buffer_handle,
+					dl::RESOURCE_STATE_UNKNOWN,
+					dl::RESOURCE_STATE_CONSTANT_BUFFER,
+					dl::STATE_TRANSITION_FLAG_UPDATE_STATE);
 			}
 
 			uniform_buffer(const std::string& name, dl::USAGE usage, const T& t)
@@ -183,7 +186,8 @@ namespace hyv
 				bdata.pData = &t;
 				bdata.DataSize = sizeof(T);
 				Dev->CreateBuffer(bdesc, &bdata, &buffer_handle);
-				Barriers.emplace_back(buffer_handle, dl::RESOURCE_STATE_UNKNOWN, dl::RESOURCE_STATE_CONSTANT_BUFFER);
+				dl::StateTransitionDesc desc[1] = { {buffer_handle, dl::RESOURCE_STATE_UNKNOWN, dl::RESOURCE_STATE_CONSTANT_BUFFER} };
+				Imm->TransitionResourceStates(1, desc);
 			}
 
 			dl::MapHelper<T> map(dl::IDeviceContext* ctxt = Imm.RawPtr())

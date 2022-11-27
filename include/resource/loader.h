@@ -26,7 +26,7 @@ namespace hyv
 		{
 		public:
 
-			asset_loader(resource& res);
+			asset_loader(resource& res, bool upload_to_gpu = true);
 
 			/// <summary>
 			/// Loads the specified static mesh into the world
@@ -47,10 +47,10 @@ namespace hyv
 
 			static_mesh_bundle create_mesh(hyv::u64 vertices_size, hyv::u64 indices_size, hyv::u64 iAt, hyv::u64 vAt, const char* name);
 
-			resource& res;
-			std::vector<vertex> vertices;
-			std::vector<u32> indices;
-
+			resource& m_res;
+			std::vector<vertex> m_vertices;
+			std::vector<u32> m_indices;
+			bool m_upload_to_gpu;
 
 		};
 	}

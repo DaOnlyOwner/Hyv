@@ -1,10 +1,11 @@
 #include "resource/loader.h"
+#include "resource/resource_components.h"
+#include "rendering/rendering_components.h"
 #include "global.h"
-#include "assimp/matrix4x4.h"
 #include "definitions.h"
+#include "assimp/matrix4x4.h"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
-#include "resource/resource_components.h"
 
 #include "Buffer.h"
 
@@ -79,7 +80,7 @@ hyv::resource::static_mesh_bundle hyv::resource::asset_loader::create_mesh(hyv::
 
 	static_mesh_bundle sm = { std::move(m_cpu),m_gpu };
 
-	res.name_to_static_mesh[std::string(name)] = sm;
+	m_res.name_to_static_mesh[std::string(name)] = sm;
 	return sm;
 }
 
@@ -93,20 +94,20 @@ void hyv::resource::asset_loader::process_node_static_mesh(std::vector<static_me
 		for (unsigned int j = 0; j < child.mNumMeshes; j++)
 		{
 			auto* mesh = scene.mMeshes[child.mMeshes[j]];
-			u64 global_vertices_at = vertices.size();
-			u64 global_indices_at = indices.size();
-			create_vertices(mesh, child.mTransformation, vertices, options.size_factor);
-			create_indices(mesh, indices);
-			auto vertices_size = vertices.size() - global_vertices_at;
-			auto indices_size = indices.size() - global_indices_at;
+			u64 global_vertices_at = m_vertices.size();
+			u64 global_indices_at = m_indices.size();
+			create_vertices(mesh, child.mTransformation, m_vertices, options.size_factor);
+			create_indices(mesh, m_indices);
+			auto vertices_size = m_vertices.size() - global_vertices_at;
+			auto indices_size = m_indices.size() - global_indices_at;
 			auto bundle = create_mesh(global_vertices_at, global_indices_at, indices_size, vertices_size, mesh->mName.C_Str());
 			bundles.push_back(std::move(bundle));
 		}
 	}
 }
 
-hyv::resource::asset_loader::asset_loader(resource& res) : res(res) {
-	auto mb = res.get_world().get_mut<global_mesh_buffer>();
+hyv::resource::asset_loader::asset_loader(resource& res, bool upload_to_gpu) : m_res(m_res), m_upload_to_gpu(upload_to_gpu) {
+	auto mb = res.get_world().get_mut<rendering::global_mesh_buffer>();
 	mb->index_buffer.Release();
 	mb->vertex_buffer.Release();
 	res.name_to_static_mesh.clear();
@@ -143,16 +144,17 @@ std::vector<hyv::resource::static_mesh_bundle> hyv::resource::asset_loader::load
 
 hyv::resource::asset_loader::~asset_loader()
 {
-	auto mb = res.get_world().get_mut<global_mesh_buffer>();
+	if (!m_upload_to_gpu) return;
+	auto mb = m_res.get_world().get_mut<rendering::global_mesh_buffer>();
 
 	//See: https://github.com/DiligentGraphics/DiligentSamples/blob/master/Tutorials/Tutorial02_Cube/src/Tutorial02_Cube.cpp
 	dl::BufferDesc vbd;
 	vbd.Name = "Global Vertex Buffer";
 	vbd.Usage = dl::USAGE_IMMUTABLE;
 	vbd.BindFlags = dl::BIND_VERTEX_BUFFER;
-	vbd.Size = vertices.size() + sizeof(vertex);
+	vbd.Size = m_vertices.size() + sizeof(vertex);
 	dl::BufferData vdata;
-	vdata.pData = vertices.data();
+	vdata.pData = m_vertices.data();
 	vdata.DataSize = vbd.Size;
 	Dev->CreateBuffer(vbd, &vdata, &mb->vertex_buffer);
 
@@ -160,10 +162,11 @@ hyv::resource::asset_loader::~asset_loader()
 	ibd.Name = "Global Index Buffer";
 	ibd.Usage = dl::USAGE_IMMUTABLE;
 	ibd.BindFlags = dl::BIND_INDEX_BUFFER;
-	ibd.Size = sizeof(u32) * indices.size();
+	ibd.Size = sizeof(u32) * m_indices.size();
 	dl::BufferData idata;
-	idata.pData = indices.data();
+	idata.pData = m_indices.data();
 	idata.DataSize = ibd.Size;
 	Dev->CreateBuffer(ibd, &idata, &mb->index_buffer);
-	res.get_world().modified<global_mesh_buffer>();
+
+	m_res.get_world().modified<rendering::global_mesh_buffer>();
 }

@@ -4,6 +4,8 @@
 #include "resource/resource.h"	
 #include "rendering/rendering.h"
 #include "rendering/rendering_module.h"
+#include "rendering/rendering_components.h"
+#include "physics/physics_components.h"
 #include "windowing/windowing.h"
 #include "definitions.h"
 #include "logging.h"
@@ -27,21 +29,42 @@ int main()
 
 	world.set<flecs::Rest>({});
 	{
-		hyv::resource::asset_loader loader(world);
+		hyv::resource::asset_loader loader(res);
 		hyv::resource::static_mesh_loader_options options;
-		options.merge = true;
-		loader.load_static_mesh(RES"/models/sponza/sponza.obj", options);
-	}
-	world.import<flecs::monitor>();
-	world.import<hyv::rendering::static_mesh_renderer_module>();
-	world.component<A>("TestA");
-	
-	for (int i = 0; i < 100000; i++)
-	{
-		world.entity().set<hyv::resource::static_mesh>({});
+		options.merge = false;
+		options.pretransform = true;
+		auto bundles = loader.load_static_mesh(RES"/models/sponza/sponza.obj", options);
+
+		for (auto& bundle : bundles)
+		{
+			world.entity()
+				.set<hyv::resource::static_mesh_gpu>(bundle.gpu_)
+				.set<hyv::physics::position>({})
+				.set<hyv::physics::rotation>({})
+				.set<hyv::physics::scale>({ 1,1,1 });
+		}
+
 	}
 
-	world.set_threads(5);
+	hyv::rendering::camera cam;
+	cam.projection = glm::perspective(80.f, info.width / (float)info.height, 0.1f, 10000.f);
+	hyv::physics::position cam_pos = { 0,5,5 };
+	hyv::physics::rotation cam_rot = { 0,0,0 };
+	hyv::physics::scale cam_scale = { 1,1,1 };
+
+	world.entity()
+		.set<hyv::rendering::camera>(cam)
+		.set<hyv::physics::position>(cam_pos)
+		.set<hyv::physics::rotation>(cam_rot)
+		.set<hyv::physics::scale>(cam_scale);
+	
+
+	world.import<flecs::monitor>();
+	world.import<hyv::rendering::rendering_module>();
+	
+	
+
+	world.set_threads(ren.num_threads());
 	
 	while (win.should_stay_up())
 	{
@@ -52,5 +75,4 @@ int main()
 
 	}
 	return 0;
-
 }

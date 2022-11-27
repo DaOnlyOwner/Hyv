@@ -20,6 +20,7 @@ namespace hyv
 		/// Creates a system that performs gbuffer shading on the cameras.
 		/// </summary>
 		/// <param name="world"></param>
-		void create_gbuffer_shading_system(flecs::world& world);
+		void create_composite_pass_system(flecs::world& world);
+
 	}
 }
