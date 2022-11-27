@@ -4,9 +4,9 @@
 #include "definitions.h"
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
+#include "resource/resource_components.h"
 
 #include "Buffer.h"
-#include <memory>
 
 namespace
 {
@@ -23,7 +23,7 @@ namespace
 				throw hyv::resource::no_texture_coords_error("Imported mesh" + std::string(p_assMesh->mName.C_Str()) + " has no texture coordinates");
 			}
 
-			glm::vec3 pos{ assPos.x * scale.x, assPos.y * scale.y, assPos.z * scale.z};
+			glm::vec3 pos{ assPos.x * scale.x, assPos.y * scale.y, assPos.z * scale.z };
 			v.pos = pos;
 
 			auto normalMatrix = trans;
@@ -65,71 +65,58 @@ namespace
 	}
 }
 
-
-hyv::resource::static_mesh_bundle hyv::resource::asset_loader::create_mesh(const char* name, std::vector<vertex>&& vertices, std::vector<u32>&& indices)
+hyv::resource::static_mesh_bundle hyv::resource::asset_loader::create_mesh(hyv::u64 vertices_size, hyv::u64 indices_size, hyv::u64 iAt, hyv::u64 vAt, const char* name)
 {
-	hyv::resource::static_mesh_gpu m_gpu;
-	//See: https://github.com/DiligentGraphics/DiligentSamples/blob/master/Tutorials/Tutorial02_Cube/src/Tutorial02_Cube.cpp
-	dl::BufferDesc vbd;
-	vbd.Name = "Global Vertex Buffer";
-	vbd.Usage = dl::USAGE_IMMUTABLE;
-	vbd.BindFlags = dl::BIND_VERTEX_BUFFER;
-	vbd.Size = vertices.size() + sizeof(vertex);
-	dl::BufferData vdata;
-	vdata.pData = vertices.data();
-	vdata.DataSize = vbd.Size;
-	Dev->CreateBuffer(vbd, &vdata, &m_gpu.vertex_buffer);
+	static_mesh_gpu m_gpu;
+	m_gpu.numIndices = indices_size;
+	m_gpu.offsetIndex = iAt;
+	m_gpu.numVertices = vertices_size;
+	m_gpu.offsetVertex = vAt;
 
-	dl::BufferDesc ibd;
-	ibd.Name = "Global Index Buffer";
-	ibd.Usage = dl::USAGE_IMMUTABLE;
-	ibd.BindFlags = dl::BIND_INDEX_BUFFER;
-	ibd.Size = sizeof(u32) * indices.size();
-	dl::BufferData idata;
-	idata.pData = indices.data();
-	idata.DataSize = ibd.Size;
-	Dev->CreateBuffer(ibd, &idata, &m_gpu.index_buffer);
+	static_mesh_cpu m_cpu;
+	m_cpu.vertices = std::make_shared<std::vector<vertex>>(vAt, vAt + vertices_size);
+	m_cpu.indices = std::make_shared<std::vector<u32>>(iAt, iAt + indices_size);
 
-	hyv::resource::static_mesh_cpu m_cpu{ std::make_shared<std::vector<vertex>>(std::move(vertices)), std::make_shared<std::vector<u32>>(std::move(indices)) };
-	static_mesh_bundle bundle{ std::move(m_cpu), std::move(m_gpu) };
-	res.name_to_static_mesh[std::string(name)] = bundle;
-	return bundle;
+	static_mesh_bundle sm = { std::move(m_cpu),m_gpu };
+
+	res.name_to_static_mesh[std::string(name)] = sm;
+	return sm;
 }
 
-void hyv::resource::asset_loader::process_node_static_mesh(const aiNode& node, const aiScene& scene, static_mesh_loader_options options, std::vector<static_mesh_bundle>& bundles)
+void hyv::resource::asset_loader::process_node_static_mesh(std::vector<static_mesh_bundle>& bundles, const aiNode& node, const aiScene& scene, static_mesh_loader_options options)
 {
 	for (unsigned int i = 0; i < node.mNumChildren; i++)
 	{
 		aiNode& child = *node.mChildren[i];
 		child.mTransformation = options.pretransform ? node.mTransformation * child.mTransformation : child.mTransformation;
-		process_node_static_mesh(child, scene, options);
+		process_node_static_mesh(bundles, child, scene, options);
 		for (unsigned int j = 0; j < child.mNumMeshes; j++)
 		{
 			auto* mesh = scene.mMeshes[child.mMeshes[j]];
-			std::vector<vertex> vertices;
-			std::vector<u32> indices;
+			u64 global_vertices_at = vertices.size();
+			u64 global_indices_at = indices.size();
 			create_vertices(mesh, child.mTransformation, vertices, options.size_factor);
 			create_indices(mesh, indices);
-			auto bundle = create_mesh(mesh->mName.C_Str(), std::move(vertices), std::move(indices));
+			auto vertices_size = vertices.size() - global_vertices_at;
+			auto indices_size = indices.size() - global_indices_at;
+			auto bundle = create_mesh(global_vertices_at, global_indices_at, indices_size, vertices_size, mesh->mName.C_Str());
 			bundles.push_back(std::move(bundle));
 		}
 	}
 }
 
 hyv::resource::asset_loader::asset_loader(resource& res) : res(res) {
-	//auto mb = world.get_mut<mesh_buffer>();
-	/*mb->index_buffer.Release();
+	auto mb = res.get_world().get_mut<global_mesh_buffer>();
+	mb->index_buffer.Release();
 	mb->vertex_buffer.Release();
-	mb->name_to_mesh.clear();*/
+	res.name_to_static_mesh.clear();
 }
 
 std::vector<hyv::resource::static_mesh_bundle> hyv::resource::asset_loader::load_static_mesh(const char* file, static_mesh_loader_options options)
 {
 	Assimp::Importer imp;
-	std::vector<static_mesh_bundle> sm_bundles;
 
-
-	int assimp_options = 
+	int assimp_options =
 		aiProcess_Triangulate |
 		aiProcess_GenNormals |
 		aiProcess_CalcTangentSpace |
@@ -139,43 +126,44 @@ std::vector<hyv::resource::static_mesh_bundle> hyv::resource::asset_loader::load
 		;
 
 	const aiScene* scene = imp.ReadFile(file, assimp_options);
+	std::vector<static_mesh_bundle> bundles;
+
 	if (scene)
 	{
-		process_node_static_mesh(*scene->mRootNode, *scene, options, sm_bundles);
+		process_node_static_mesh(bundles, *scene->mRootNode, *scene, options);
 	}
 
 	else
 	{
-		throw mesh_import_error("Something went wrong parsing the model" + std::string(file) );
+		throw mesh_import_error("Something went wrong parsing the model" + std::string(file));
 	}
 
-	return sm_bundles;
+	return bundles;
 }
 
 hyv::resource::asset_loader::~asset_loader()
 {
-	//auto mb = world.get_mut<mesh_buffer>();
+	auto mb = res.get_world().get_mut<global_mesh_buffer>();
 
-	////See: https://github.com/DiligentGraphics/DiligentSamples/blob/master/Tutorials/Tutorial02_Cube/src/Tutorial02_Cube.cpp
-	//dl::BufferDesc vbd;
-	//vbd.Name = "Global Vertex Buffer";
-	//vbd.Usage = dl::USAGE_IMMUTABLE;
-	//vbd.BindFlags = dl::BIND_VERTEX_BUFFER;
-	//vbd.Size = vertices.size() + sizeof(vertex);
-	//dl::BufferData vdata;
-	//vdata.pData = vertices.data();
-	//vdata.DataSize = vbd.Size;
-	//Dev->CreateBuffer(vbd, &vdata, &mb->vertex_buffer);
+	//See: https://github.com/DiligentGraphics/DiligentSamples/blob/master/Tutorials/Tutorial02_Cube/src/Tutorial02_Cube.cpp
+	dl::BufferDesc vbd;
+	vbd.Name = "Global Vertex Buffer";
+	vbd.Usage = dl::USAGE_IMMUTABLE;
+	vbd.BindFlags = dl::BIND_VERTEX_BUFFER;
+	vbd.Size = vertices.size() + sizeof(vertex);
+	dl::BufferData vdata;
+	vdata.pData = vertices.data();
+	vdata.DataSize = vbd.Size;
+	Dev->CreateBuffer(vbd, &vdata, &mb->vertex_buffer);
 
-	//dl::BufferDesc ibd;
-	//ibd.Name = "Global Index Buffer";
-	//ibd.Usage = dl::USAGE_IMMUTABLE;
-	//ibd.BindFlags = dl::BIND_INDEX_BUFFER;
-	//ibd.Size = sizeof(u32) * indices.size();
-	//dl::BufferData idata;
-	//idata.pData = indices.data();
-	//idata.DataSize = ibd.Size;
-	//Dev->CreateBuffer(ibd, &idata, &mb->index_buffer);
-	//world.modified<mesh_buffer>();
+	dl::BufferDesc ibd;
+	ibd.Name = "Global Index Buffer";
+	ibd.Usage = dl::USAGE_IMMUTABLE;
+	ibd.BindFlags = dl::BIND_INDEX_BUFFER;
+	ibd.Size = sizeof(u32) * indices.size();
+	dl::BufferData idata;
+	idata.pData = indices.data();
+	idata.DataSize = ibd.Size;
+	Dev->CreateBuffer(ibd, &idata, &mb->index_buffer);
+	res.get_world().modified<global_mesh_buffer>();
 }
-

@@ -68,6 +68,12 @@ hyv::rendering::rendering::rendering(const init_info& info, windowing::windowing
 
 void hyv::rendering::rendering::new_frame()
 {
+
+	if (!Barriers.empty())
+	{
+		Imm->TransitionResourceStates((u32)Barriers.size(), Barriers.data());
+	}
+
 	Imm->ClearRenderTarget(SwapChain->GetCurrentBackBufferRTV(), clear_color, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 	Imm->ClearDepthStencil(SwapChain->GetDepthBufferDSV(), dl::CLEAR_DEPTH_FLAG, 1.f, 0, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 	ImGui_ImplGlfw_NewFrame();

@@ -9,6 +9,9 @@ namespace hyv
 {
 	namespace rendering
 	{
+
+		// TODO: Implement explicit resource transition
+
 		/// <summary>
 		/// Implements an structured buffer. The buffer dynamically grows.
 		/// Right now, there is no way to delete data
@@ -165,6 +168,7 @@ namespace hyv
 				bdesc.Size = sizeof(T);
 				bdesc.CPUAccessFlags = usage == dl::USAGE_DYNAMIC ? dl::CPU_ACCESS_WRITE : dl::CPU_ACCESS_NONE;
 				Dev->CreateBuffer(bdesc, nullptr, &buffer_handle);
+				Barriers.emplace_back(buffer_handle, dl::RESOURCE_STATE_UNKNOWN, dl::RESOURCE_STATE_CONSTANT_BUFFER);
 			}
 
 			uniform_buffer(const std::string& name, dl::USAGE usage, const T& t)
@@ -179,6 +183,7 @@ namespace hyv
 				bdata.pData = &t;
 				bdata.DataSize = sizeof(T);
 				Dev->CreateBuffer(bdesc, &bdata, &buffer_handle);
+				Barriers.emplace_back(buffer_handle, dl::RESOURCE_STATE_UNKNOWN, dl::RESOURCE_STATE_CONSTANT_BUFFER);
 			}
 
 			dl::MapHelper<T> map(dl::IDeviceContext* ctxt = Imm.RawPtr())
@@ -188,10 +193,10 @@ namespace hyv
 
 			dl::IBuffer* get_buffer() { return buffer_handle.RawPtr(); }
 
-			void Update(const T& val)
+			/*void Update(const T& val)
 			{
 				Imm->UpdateBuffer(buffer_handle, 0, sizeof(T), &val, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-			}
+			}*/
 
 		private:
 			RefCntAutoPtr<dl::IBuffer> buffer_handle;

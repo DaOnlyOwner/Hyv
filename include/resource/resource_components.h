@@ -14,14 +14,22 @@ namespace hyv
 
 		struct static_mesh_gpu
 		{
-			dl::RefCntAutoPtr<dl::IBuffer> vertex_buffer;
-			dl::RefCntAutoPtr<dl::IBuffer> index_buffer;
+			u32 numIndices = 0;
+			u32 numVertices = 0;
+			u64 offsetIndex = 0;
+			u64 offsetVertex = 0;
 		};
 
 		struct static_mesh_cpu
 		{
 			std::shared_ptr<std::vector<vertex>> vertices;
 			std::shared_ptr<std::vector<u32>> indices;
+		};
+
+		struct global_mesh_buffer
+		{
+			dl::RefCntAutoPtr<dl::IBuffer> vertex_buffer;
+			dl::RefCntAutoPtr<dl::IBuffer> index_buffer;
 		};
 
 		struct material

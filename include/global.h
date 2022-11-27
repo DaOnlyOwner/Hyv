@@ -16,5 +16,6 @@ namespace hyv
 	extern dl::RefCntAutoPtr<dl::ISwapChain> SwapChain;
 	extern dl::RefCntAutoPtr<dl::IShaderSourceInputStreamFactory> ShaderStream;
 	extern std::vector<dl::RefCntAutoPtr<dl::ICommandList>> CmdLists;
+	extern std::vector<dl::StateTransitionDesc> Barriers;
 
 }

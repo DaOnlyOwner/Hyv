@@ -7,29 +7,26 @@
 #include "assimp/mesh.h"
 #include "resource/resource.h"
 
-
 namespace hyv
 {
 	namespace resource
 	{
-
-
 		struct static_mesh_loader_options
 		{
 			bool pretransform = false;
 			bool merge = false;
 			bool optimize = true;
-			glm::vec3 size_factor = {1,1,1};
+			glm::vec3 size_factor = { 1,1,1 };
 		};
 
 		DEF_CUSTOM_EXCEPTION(no_texture_coords_error);
 		DEF_CUSTOM_EXCEPTION(mesh_import_error);
-		
+
 		class asset_loader
 		{
 		public:
 
-			asset_loader(resource& resource);
+			asset_loader(resource& res);
 
 			/// <summary>
 			/// Loads the specified static mesh into the world
@@ -37,18 +34,23 @@ namespace hyv
 			/// <param name="world">The world with the associated vertex buffer</param>
 			/// <param name="file">The path to the static mesh</param>
 			/// <param name="options">Loading options</param>
-			std::vector<static_mesh_bundle> load_static_mesh(const char* file, static_mesh_loader_options options);
-						
+			std::vector<hyv::resource::static_mesh_bundle> load_static_mesh(const char* file, static_mesh_loader_options options);
+
+
 			~asset_loader();
 
 		private:
 
-			void process_node_static_mesh(const aiNode& node, const aiScene& scene, static_mesh_loader_options options, std::vector<static_mesh_bundle>& bundle);
-			static_mesh_bundle create_mesh(const char* name, std::vector<vertex>&& vertices, std::vector<u32>&& indices);
+			void process_node_static_mesh(std::vector<static_mesh_bundle>& bundles, const aiNode& node, const aiScene& scene, static_mesh_loader_options options);
 
 		private:
-			resource& res;		
-			
+
+			static_mesh_bundle create_mesh(hyv::u64 vertices_size, hyv::u64 indices_size, hyv::u64 iAt, hyv::u64 vAt, const char* name);
+
+			resource& res;
+			std::vector<vertex> vertices;
+			std::vector<u32> indices;
+
 
 		};
 	}

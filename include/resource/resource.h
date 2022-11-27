@@ -54,6 +54,7 @@ namespace hyv
 				return T{};
 			}
 			std::unordered_map<std::string, static_mesh_bundle> name_to_static_mesh;
+			//std::unordered_map<std::string, std::string> name_to_file;
 			flecs::world& world;
 
 		};

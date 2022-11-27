@@ -8,24 +8,32 @@ namespace hyv
 {
 	namespace rendering
 	{
+
+		struct camera_constants
+		{
+			glm::mat4 VPInv;
+			glm::vec4 eyePos;
+		};
+
+
 		struct camera
 		{
 			dl::RefCntAutoPtr<dl::ITexture> albedo_buffer;
 			dl::RefCntAutoPtr<dl::ITexture> normal_buffer;
 			dl::RefCntAutoPtr<dl::ITexture> depth_buffer;
+			//uniform_buffer<camera_constants> constants;
+
 			int width, height;
 			float clear_color[4] = { 0,0,0,1 };
 			glm::mat4 projection;
 		};
 
-		struct geometry_pass_VS_per_mesh_constants
+		struct material
 		{
-			glm::mat4 model; // 4x4 * sizeof(float) = 16 * 4
-			glm::mat4 normal; // 4 * 4 = 16 * 4
-			glm::mat4 MVP; // 4 * 4  = 16 * 4  
+			dl::RefCntAutoPtr<dl::IPipelineState> pipeline;
+			dl::RefCntAutoPtr<dl::IShaderResourceBinding> SRB;
 		};
 
-		typedef std::vector<uniform_buffer<geometry_pass_VS_per_mesh_constants>> geometry_pass_constants_vector;
 
 	}
 }

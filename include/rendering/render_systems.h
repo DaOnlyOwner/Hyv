@@ -14,7 +14,7 @@ namespace hyv
 		/// Creates a system that renders all mesh entities to all cameras.
 		/// </summary>
 		/// <param name="world">The world of which the entities should be rendered</param>
-		void create_mesh_renderer_system(flecs::world& world);
+		void create_geometry_pass_system(flecs::world& world);
 
 		/// <summary>
 		/// Creates a system that performs gbuffer shading on the cameras.

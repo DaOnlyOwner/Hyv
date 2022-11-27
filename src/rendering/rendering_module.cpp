@@ -43,7 +43,7 @@ namespace
 hyv::rendering::static_mesh_renderer_module::static_mesh_renderer_module(flecs::world& world)
 {
 	world.module<static_mesh_renderer_module>("StaticMeshRendererModule");
-	create_mesh_renderer_system(world);
+	create_geometry_pass_system(world);
 	world.observer<camera>().event(flecs::OnSet).each([](flecs::entity& e, camera& cam) {
         init_camera(cam);
 		});

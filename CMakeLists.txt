@@ -35,7 +35,7 @@ copy_required_dlls(Hyv)
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Hyv)
 
-target_compile_features(Hyv PUBLIC cxx_std_17)
+target_compile_features(Hyv PUBLIC cxx_std_20)
 
 target_compile_options(Hyv PRIVATE -DUNICODE -DENGINE_DLL -DRES=\"${CMAKE_SOURCE_DIR}/resources\" -DSHADER_RES=\"${CMAKE_SOURCE_DIR}/resources/shaders\")
 
