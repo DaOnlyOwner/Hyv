@@ -4,6 +4,7 @@
 #include "global.h"
 #include "rendering/buffer.h"
 #include <string>
+#include "logging.h"
 
 namespace
 {
@@ -51,11 +52,20 @@ namespace
 hyv::rendering::rendering_module::rendering_module(flecs::world& world)
 {
 	world.module<rendering_module>("StaticMeshRendererModule");
-	create_geometry_pass_system(world);
-    create_composite_pass_system(world);
-	world.observer<camera>().event(flecs::OnSet).each([](flecs::entity& e, camera& cam) {
+	world.observer<camera>().event(flecs::OnSet).each([](flecs::entity e, camera& cam) {
         init_camera(cam);
 		});
+    world.observer<main_camera>().event(flecs::OnSet).each([](flecs::entity e, main_camera& cam) {
+        init_camera(cam.cam);
+        auto bundle = e.world().get_mut<composite_pass_pipeline_bundle>();
+        bundle->SRB->GetVariableByName(dl::SHADER_TYPE_PIXEL, "GBuffer_Normal")
+        ->Set(cam.cam.normal_buffer->GetDefaultView(dl::TEXTURE_VIEW_SHADER_RESOURCE));
+        });
+
+
+
+	create_geometry_pass_system(world);
+    create_composite_pass_system(world);
     
     /*geometry_pass_constants_vector v;
     v.reserve(DeferredCtxts.size());
@@ -66,16 +76,22 @@ hyv::rendering::rendering_module::rendering_module(flecs::world& world)
 
 
     geometry_pass_pipeline_bundle gbundle;
-    shader gvs(shader_type::Vertex, SHADER_RES "/rendering/geometry_pass_vs.hlsl", "Geometry Pass Vertex Shader");
-    shader gps(shader_type::Pixel, SHADER_RES "/rendering/geometry_pass_ps.hlsl", "Geometry Pass Pixel Shader");
+    shader gvs(shader_type::Vertex, SHADER_RES "/rendering/geometry_vs.hlsl", "Geometry Pass Vertex Shader");
+    shader gps(shader_type::Pixel, SHADER_RES "/rendering/geometry_ps.hlsl", "Geometry Pass Pixel Shader");
+    gvs.ok();
+    gps.ok();
     gbundle.pso.setup_geometry_pass(gvs, gps, nullptr, 0);
     gbundle.SRB = gbundle.pso.create_srb();
     gbundle.consts = uniform_buffer<geometry_pass_constants>("Geometric Constants");
-    gbundle.pso.get_handle()->GetStaticVariableByName(dl::SHADER_TYPE_VERTEX, "mesh_consts")->Set(gbundle.consts.get_buffer());
+    gbundle.pso.get_handle()->GetStaticVariableByName(dl::SHADER_TYPE_VERTEX, "mesh_consts")
+        ->Set(gbundle.consts.get_buffer());
+    gbundle.pso.get_handle()->InitializeStaticSRBResources(gbundle.SRB);
 
     composite_pass_pipeline_bundle pbundle;
-    shader cvs(shader_type::Vertex, SHADER_RES "/rendering/composite_pass_vs.hlsl", "Composite Pass Vertex Shader");
-    shader cps(shader_type::Pixel, SHADER_RES "/rendering/composite_pass_ps.hlsl", "Composite Pass Pixel Shader");
+    shader cvs(shader_type::Vertex, SHADER_RES "/rendering/composite_vs.hlsl", "Composite Pass Vertex Shader");
+    shader cps(shader_type::Pixel, SHADER_RES "/rendering/composite_ps.hlsl", "Composite Pass Pixel Shader");
+    cvs.ok();
+    cps.ok();
     pbundle.pso.setup_composite_pass(cvs, cps, nullptr, 0);
     pbundle.SRB = pbundle.pso.create_srb();
 

@@ -66,7 +66,7 @@ namespace
 	}
 }
 
-hyv::resource::static_mesh_bundle hyv::resource::asset_loader::create_mesh(hyv::u64 vertices_size, hyv::u64 indices_size, hyv::u64 iAt, hyv::u64 vAt, const char* name)
+hyv::resource::static_mesh_bundle hyv::resource::asset_loader::create_mesh(hyv::u64 vertices_size, hyv::u64 indices_size, hyv::u64 vAt, hyv::u64 iAt, const char* name)
 {
 	static_mesh_gpu m_gpu;
 	m_gpu.numIndices = indices_size;
@@ -75,8 +75,8 @@ hyv::resource::static_mesh_bundle hyv::resource::asset_loader::create_mesh(hyv::
 	m_gpu.offsetVertex = vAt;
 
 	static_mesh_cpu m_cpu;
-	m_cpu.vertices = std::make_shared<std::vector<vertex>>(vAt, vAt + vertices_size);
-	m_cpu.indices = std::make_shared<std::vector<u32>>(iAt, iAt + indices_size);
+	m_cpu.vertices = std::make_shared<std::vector<vertex>>(m_vertices.begin() + vAt, m_vertices.begin() + vAt + vertices_size - 1);
+	m_cpu.indices = std::make_shared<std::vector<u32>>(m_indices.begin() + iAt, m_indices.begin() + iAt + indices_size - 1);
 
 	static_mesh_bundle sm = { std::move(m_cpu),m_gpu };
 
@@ -100,13 +100,13 @@ void hyv::resource::asset_loader::process_node_static_mesh(std::vector<static_me
 			create_indices(mesh, m_indices);
 			auto vertices_size = m_vertices.size() - global_vertices_at;
 			auto indices_size = m_indices.size() - global_indices_at;
-			auto bundle = create_mesh(global_vertices_at, global_indices_at, indices_size, vertices_size, mesh->mName.C_Str());
+			auto bundle = create_mesh(vertices_size, indices_size, global_vertices_at, global_indices_at, mesh->mName.C_Str());
 			bundles.push_back(std::move(bundle));
 		}
 	}
 }
 
-hyv::resource::asset_loader::asset_loader(resource& res, bool upload_to_gpu) : m_res(m_res), m_upload_to_gpu(upload_to_gpu) {
+hyv::resource::asset_loader::asset_loader(resource& res, bool upload_to_gpu) : m_res(res), m_upload_to_gpu(upload_to_gpu) {
 	auto mb = res.get_world().get_mut<rendering::global_mesh_buffer>();
 	mb->index_buffer.Release();
 	mb->vertex_buffer.Release();

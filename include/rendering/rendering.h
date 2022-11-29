@@ -17,10 +17,10 @@ namespace hyv
 		class rendering
 		{
 		public:
-			void new_frame();
+			void new_frame(float* clear_color);
 			void end_frame();
+			void touch();
 			~rendering();
-			float clear_color[4];
 			static rendering& inst(const init_info& info, windowing::windowing& w);
 			static rendering& inst();
 

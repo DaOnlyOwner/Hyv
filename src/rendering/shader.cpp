@@ -22,10 +22,13 @@ void hyv::rendering::shader::ok()
 	{
 	case shader_type::Vertex:
 		shader_type_dl = dl::SHADER_TYPE_VERTEX;
+		break;
 	case shader_type::Pixel:
 		shader_type_dl = dl::SHADER_TYPE_PIXEL;
+		break;
 	case shader_type::Compute:
 		shader_type_dl = dl::SHADER_TYPE_COMPUTE;
+		break;
 	default:
 		abort(); // WTF
 	}

@@ -28,7 +28,7 @@ namespace hyv
 
 		struct material
 		{
-
+			int dummy = 0;
 		};
 
 		/*struct mesh_buffer

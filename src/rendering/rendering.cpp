@@ -31,6 +31,7 @@ Diligent::RefCntAutoPtr<Diligent::ISwapChain> hyv::SwapChain;
 Diligent::RefCntAutoPtr<Diligent::IRenderDevice> hyv::Dev;
 Diligent::RefCntAutoPtr<Diligent::IShaderSourceInputStreamFactory> hyv::ShaderStream;
 std::vector<Diligent::RefCntAutoPtr<Diligent::ICommandList>> hyv::CmdLists;
+std::vector<Diligent::ICommandList*> hyv::CmdPtrs;
 
 void callback(Diligent::DEBUG_MESSAGE_SEVERITY Severity,
 	const char* Message,
@@ -45,7 +46,7 @@ void callback(Diligent::DEBUG_MESSAGE_SEVERITY Severity,
 
 	else if (Severity == Diligent::DEBUG_MESSAGE_SEVERITY::DEBUG_MESSAGE_SEVERITY_ERROR)
 	{
-		HYV_NON_FATAL_ERROR("{}", Message);
+		HYV_ERROR("{}", Message);
 	}
 
 	else if (Severity == Diligent::DEBUG_MESSAGE_SEVERITY::DEBUG_MESSAGE_SEVERITY_INFO)
@@ -64,31 +65,34 @@ void callback(Diligent::DEBUG_MESSAGE_SEVERITY Severity,
 hyv::rendering::rendering::rendering(const init_info& info, windowing::windowing& w)
 {
 	init_diligent(w.get_window(),info);
+	if (info.backend == init_info::RenderBackend::D3D12)
+		ImGui_ImplGlfw_InitForOther(w.get_window(), false);
+	else ImGui_ImplGlfw_InitForOther(w.get_window(), false);
 }
 
-void hyv::rendering::rendering::new_frame()
+void hyv::rendering::rendering::new_frame(float* clear_color)
 {
-
-	if (!Barriers.empty())
-	{
-		Imm->TransitionResourceStates((u32)Barriers.size(), Barriers.data());
-	}
-
-	Imm->ClearRenderTarget(SwapChain->GetCurrentBackBufferRTV(), clear_color, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-	Imm->ClearDepthStencil(SwapChain->GetDepthBufferDSV(), dl::CLEAR_DEPTH_FLAG, 1.f, 0, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+	auto* rtv = SwapChain->GetCurrentBackBufferRTV();
+	auto* dsv = SwapChain->GetDepthBufferDSV();
+	Imm->SetRenderTargets(1, &rtv, dsv, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+	Imm->ClearRenderTarget(SwapChain->GetCurrentBackBufferRTV(), clear_color, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+	Imm->ClearDepthStencil(SwapChain->GetDepthBufferDSV(), dl::CLEAR_DEPTH_FLAG, 1.f, 0, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 	ImGui_ImplGlfw_NewFrame();
 	imguiImpl->NewFrame(SwapChain->GetDesc().Width, SwapChain->GetDesc().Height, SwapChain->GetDesc().PreTransform);
 }
 
 void hyv::rendering::rendering::end_frame()
 {
-	auto* rtv = SwapChain->GetCurrentBackBufferRTV();
-	auto* dsv = SwapChain->GetDepthBufferDSV();
-	Imm->SetRenderTargets(1, &rtv, dsv, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 	imguiImpl->Render(Imm);
 	Imm->Flush();
 	Imm->FinishFrame();
 	SwapChain->Present();
+}
+
+void hyv::rendering::rendering::touch() {
+	auto* rtv = SwapChain->GetCurrentBackBufferRTV();
+	auto* dsv = SwapChain->GetDepthBufferDSV();
+	Imm->SetRenderTargets(1, &rtv, dsv, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 }
 
 hyv::rendering::rendering::~rendering()
@@ -179,8 +183,6 @@ void hyv::rendering::rendering::init_diligent(GLFWwindow* window, const init_inf
 	{
 		DeferredCtxts[i - 1] = ctxts[i];
 	}
-
-	
 
 	//Renderer::Inst().Init(device, imm, swapChain,streamFactory);
 	imguiImpl = std::make_unique<dl::ImGuiImplDiligent>(Dev, SwapChain->GetDesc().ColorBufferFormat, SwapChain->GetDesc().DepthBufferFormat);

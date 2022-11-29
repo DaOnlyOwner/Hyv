@@ -5,6 +5,7 @@ hyv::windowing::windowing::windowing(const init_info& info)
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	m_glfw_window = glfwCreateWindow(info.width, info.height, info.title.c_str(), NULL, NULL);
+	glfwSetWindowUserPointer(m_glfw_window, this);
 }
 
 bool hyv::windowing::windowing::should_stay_up()

@@ -29,7 +29,12 @@ namespace hyv
 			glm::mat4 projection;
 		};
 
-		struct MainCameraTag{};
+		// This is needed because I can't iterate over cameras in a multithreaded system
+		// So I render the objects to the MainCamera multithreaded, but all other cameras are singlethreaded
+		struct main_camera
+		{
+			camera cam;
+		};
 
 		struct geometry_pass_constants
 		{

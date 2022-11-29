@@ -8,8 +8,16 @@ namespace hyv
 {
 	namespace physics
 	{
-		typedef glm::vec3 position;
-		typedef glm::vec3 rotation;
-		typedef glm::vec3 scale;
+		struct transform
+		{
+			glm::vec3 position = { 0,0,0 };
+			glm::vec3 rotation = { 0,0,0 };
+			glm::vec3 scale = { 1,1,1 };
+		};
+
+		struct main_camera_transform
+		{
+			transform trans;
+		};
 	}
 }

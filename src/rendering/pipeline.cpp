@@ -12,7 +12,7 @@ hyv::rendering::graphics_pipeline& hyv::rendering::graphics_pipeline::setup_geom
     m_ci.GraphicsPipeline.RasterizerDesc.CullMode = dl::CULL_MODE_BACK;
     m_ci.GraphicsPipeline.DepthStencilDesc.DepthEnable = true;
     m_ci.GraphicsPipeline.DepthStencilDesc.DepthWriteEnable = true;
-    m_ci.PSODesc.ResourceLayout.DefaultVariableType = dl::SHADER_RESOURCE_VARIABLE_TYPE_MUTABLE;
+    m_ci.PSODesc.ResourceLayout.DefaultVariableType = dl::SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
     m_ci.pVS = vs.get_shader_handle();
     m_ci.pPS = ps.get_shader_handle();
     if (descs != nullptr)
@@ -20,6 +20,17 @@ hyv::rendering::graphics_pipeline& hyv::rendering::graphics_pipeline::setup_geom
         m_ci.PSODesc.ResourceLayout.ImmutableSamplers = descs;
         m_ci.PSODesc.ResourceLayout.NumImmutableSamplers = descs_size;
     }
+
+    dl::LayoutElement elems[] = {
+        dl::LayoutElement{0, 0, 3, dl::VT_FLOAT32, dl::False},
+        dl::LayoutElement(1, 0, 3, dl::VT_FLOAT32, dl::False),
+        dl::LayoutElement(2, 0, 2, dl::VT_FLOAT32, dl::False),
+    };
+
+    m_ci.GraphicsPipeline.InputLayout.LayoutElements = elems;
+    m_ci.GraphicsPipeline.InputLayout.NumElements = _countof(elems);
+    m_ci.PSODesc.Name = "Geometry Pass Pipeline";
+
     create();
     return *this;
 }
@@ -42,6 +53,9 @@ hyv::rendering::graphics_pipeline& hyv::rendering::graphics_pipeline::setup_comp
         m_ci.PSODesc.ResourceLayout.ImmutableSamplers = descs;
         m_ci.PSODesc.ResourceLayout.NumImmutableSamplers = descs_size;
     }
+    m_ci.PSODesc.Name = "Composite Pass Pipeline";
+
+    create();
     return *this;
 }
 
