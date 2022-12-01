@@ -37,7 +37,6 @@ void hyv::rendering::create_geometry_pass_system(flecs::world& world)
 
 		});
 
-
 	world.system<
 		resource::static_mesh_gpu,
 		physics::transform,
@@ -45,7 +44,7 @@ void hyv::rendering::create_geometry_pass_system(flecs::world& world)
 			.multi_threaded()
 			.kind(flecs::OnUpdate)
 			.write(flecs::Wildcard)
-			.iter([&world](
+			.iter([](
 		flecs::iter it,
 		resource::static_mesh_gpu* sm_ptr,
 		physics::transform* trans_ptr,
@@ -59,38 +58,37 @@ void hyv::rendering::create_geometry_pass_system(flecs::world& world)
 
 			dl::IBuffer* vbos[] = { global_mb->vertex_buffer.RawPtr() };
 			ctxt->SetIndexBuffer(global_mb->index_buffer.RawPtr(), 0, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-			
-			auto& cam = *it.world().get_mut<main_camera>();
-			auto& trans_cam = *it.world().get_mut<physics::main_camera_transform>();
-
-			dl::ITextureView* RTVs[] =
+			auto camera_filter = it.world().filter_builder<camera, physics::transform>().with<MainCameraTag>().build();
+			camera_filter.each([&](camera& cam, physics::transform& trans_cam) {
+				dl::ITextureView* RTVs[] =
 			{
-				cam.cam.albedo_buffer->GetDefaultView(dl::TEXTURE_VIEW_RENDER_TARGET),
-				cam.cam.normal_buffer->GetDefaultView(dl::TEXTURE_VIEW_RENDER_TARGET)
+				cam.albedo_buffer->GetDefaultView(dl::TEXTURE_VIEW_RENDER_TARGET),
+				cam.normal_buffer->GetDefaultView(dl::TEXTURE_VIEW_RENDER_TARGET)
 			};
 
-			dl::ITextureView* DSV = cam.cam.depth_buffer->GetDefaultView(dl::TEXTURE_VIEW_DEPTH_STENCIL);
+			dl::ITextureView* DSV = cam.depth_buffer->GetDefaultView(dl::TEXTURE_VIEW_DEPTH_STENCIL);
 
 			ctxt->SetRenderTargets(_countof(RTVs), RTVs, DSV, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-			
+				
 			for (auto i : it)
 			{
 				auto& sm = sm_ptr[i];
 				auto& trans = trans_ptr[i];
 				auto& mat = mat_ptr[i];
 				auto [model, normal] = physics::get_model_normal(trans);
-						
+				
 				{
 					auto mapped = geom_pass_bundle->consts.map(ctxt.RawPtr());
-					auto [view, _2] = physics::get_model_normal(trans_cam.trans);
-					auto MVP = cam.cam.projection * view * model;
+					auto view = physics::get_view(trans_cam);
+					auto MVP = glm::transpose(cam.projection * view * model);
 					mapped->model = model;
 					mapped->MVP = MVP;
 					mapped->normal = normal;
 				}
 
 				u64 offset[] = { sm.offsetVertex * sizeof(vertex) };
-				ctxt->SetVertexBuffers(0, 1, vbos, offset, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY, dl::SET_VERTEX_BUFFERS_FLAG_RESET);					
+				//HYV_INFO("{}", offset[0]);
+				ctxt->SetVertexBuffers(0, 1, vbos, offset, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY, dl::SET_VERTEX_BUFFERS_FLAG_RESET);
 				dl::DrawIndexedAttribs attribs;
 
 				attribs.IndexType = dl::VT_UINT32;
@@ -103,10 +101,10 @@ void hyv::rendering::create_geometry_pass_system(flecs::world& world)
 				ctxt->DrawIndexed(attribs);
 			}
 
+			});
 			dl::RefCntAutoPtr<dl::ICommandList> cmd_list;
 			ctxt->FinishCommandList(&cmd_list);
 			CmdLists[thread_id] = cmd_list;
-			ctxt->FinishFrame();
 
 			});
 
@@ -118,35 +116,74 @@ void hyv::rendering::create_composite_pass_system(flecs::world& world)
 	//https://github.com/DiligentGraphics/DiligentSamples/blob/946e4393eee4db51fc7522098a814bbcfa47a978/Tutorials/Tutorial06_Multithreading/src/Tutorial06_Multithreading.cpp
 	world.system<>("SubmitCommandBuffersSystem").iter([](flecs::iter it)
 		{
-			CmdPtrs.resize(CmdLists.size());
-			for (int i = 0; i < CmdPtrs.size(); i++)
-			{
-				CmdPtrs[i] = CmdLists[i].RawPtr();
-			}
+			int countNotNull = 0;
+	for (int i = 0; i < CmdLists.size(); i++)
+	{
+		if (CmdLists[i]) countNotNull++;
+	}
 
-			Imm->ExecuteCommandLists(CmdPtrs.size(), CmdPtrs.data());
-			for (auto& l : CmdLists) l.Release();
+	CmdPtrs.resize(countNotNull);
+	for (int i = 0; i < CmdPtrs.size(); i++)
+	{
+		if (!CmdLists[i]) continue;
+		CmdPtrs[i] = CmdLists[i].RawPtr();
+	}
+
+	Imm->ExecuteCommandLists(CmdPtrs.size(), CmdPtrs.data());
+	for (auto& ctxt : DeferredCtxts)
+	{
+		ctxt->FinishFrame();
+	}
+	for (auto& l : CmdLists) l.Release();
 
 		});
-		
-	world.system<main_camera>("CompositeRenderPassSystem").each([](flecs::entity e, main_camera& cam)
-		{
-			dl::StateTransitionDesc desc[] = { 
-				{cam.cam.depth_buffer,dl::RESOURCE_STATE_UNKNOWN,dl::RESOURCE_STATE_DEPTH_READ, dl::STATE_TRANSITION_FLAG_UPDATE_STATE},
-				{cam.cam.albedo_buffer,dl::RESOURCE_STATE_UNKNOWN,dl::RESOURCE_STATE_SHADER_RESOURCE, dl::STATE_TRANSITION_FLAG_UPDATE_STATE},
-				{cam.cam.normal_buffer,dl::RESOURCE_STATE_UNKNOWN,dl::RESOURCE_STATE_SHADER_RESOURCE, dl::STATE_TRANSITION_FLAG_UPDATE_STATE}
-		};
-			Imm->TransitionResourceStates(_countof(desc), desc);
 
-			auto composite_pass = e.world().get_mut<composite_pass_pipeline_bundle>();
-	
+	world.system<camera>("CompositeRenderPassSystem").with<MainCameraTag>().each([](flecs::entity e, camera& cam)
+		{
 			auto* rtv = SwapChain->GetCurrentBackBufferRTV();
-			Imm->SetRenderTargets(1, &rtv, nullptr, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-			Imm->ClearRenderTarget(rtv, cam.cam.clear_color, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-			Imm->SetPipelineState(composite_pass->pso.get_handle());
-			Imm->CommitShaderResources(composite_pass->SRB, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-			Imm->SetVertexBuffers(0, 0, nullptr, nullptr, dl::RESOURCE_STATE_TRANSITION_MODE_NONE, dl::SET_VERTEX_BUFFERS_FLAG_RESET);
-			Imm->SetIndexBuffer(nullptr, 0, dl::RESOURCE_STATE_TRANSITION_MODE_NONE);
-			Imm->Draw(dl::DrawAttribs{ 3,dl::DRAW_FLAG_VERIFY_ALL });
+	auto* dsv = SwapChain->GetDepthBufferDSV();
+	dl::StateTransitionDesc desc[] = {
+		{cam.depth_buffer,dl::RESOURCE_STATE_UNKNOWN,dl::RESOURCE_STATE_DEPTH_READ, dl::STATE_TRANSITION_FLAG_UPDATE_STATE},
+		{cam.albedo_buffer,dl::RESOURCE_STATE_UNKNOWN,dl::RESOURCE_STATE_SHADER_RESOURCE, dl::STATE_TRANSITION_FLAG_UPDATE_STATE},
+		{cam.normal_buffer,dl::RESOURCE_STATE_UNKNOWN,dl::RESOURCE_STATE_SHADER_RESOURCE, dl::STATE_TRANSITION_FLAG_UPDATE_STATE},
+		{rtv->GetTexture(),dl::RESOURCE_STATE_UNKNOWN,dl::RESOURCE_STATE_RENDER_TARGET,dl::STATE_TRANSITION_FLAG_UPDATE_STATE},
+		{dsv->GetTexture(),dl::RESOURCE_STATE_UNKNOWN,dl::RESOURCE_STATE_DEPTH_WRITE,dl::STATE_TRANSITION_FLAG_UPDATE_STATE}
+	};
+	Imm->TransitionResourceStates(_countof(desc), desc);
+
+	auto composite_pass = e.world().get_mut<composite_pass_pipeline_bundle>();
+
+	Imm->SetRenderTargets(1, &rtv, dsv, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+	Imm->ClearRenderTarget(rtv, cam.clear_color, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+	Imm->SetPipelineState(composite_pass->pso.get_handle());
+	Imm->CommitShaderResources(composite_pass->SRB, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+	Imm->SetVertexBuffers(0, 0, nullptr, nullptr, dl::RESOURCE_STATE_TRANSITION_MODE_NONE, dl::SET_VERTEX_BUFFERS_FLAG_RESET);
+	Imm->SetIndexBuffer(nullptr, 0, dl::RESOURCE_STATE_TRANSITION_MODE_NONE);
+	Imm->Draw(dl::DrawAttribs{ 3,dl::DRAW_FLAG_VERIFY_ALL });
+
+	dl::StateTransitionDesc desc_back[] = {
+		{cam.depth_buffer, dl::RESOURCE_STATE_UNKNOWN, dl::RESOURCE_STATE_DEPTH_WRITE, dl::STATE_TRANSITION_FLAG_UPDATE_STATE},
+		{cam.albedo_buffer,dl::RESOURCE_STATE_UNKNOWN, dl::RESOURCE_STATE_RENDER_TARGET, dl::STATE_TRANSITION_FLAG_UPDATE_STATE},
+		{cam.normal_buffer,dl::RESOURCE_STATE_UNKNOWN, dl::RESOURCE_STATE_RENDER_TARGET, dl::STATE_TRANSITION_FLAG_UPDATE_STATE}
+	};
+	Imm->TransitionResourceStates(_countof(desc_back), desc_back);
+
+	dl::ITextureView* cam_rtvs[] =
+	{
+		cam.albedo_buffer->GetDefaultView(dl::TEXTURE_VIEW_RENDER_TARGET),
+		cam.normal_buffer->GetDefaultView(dl::TEXTURE_VIEW_RENDER_TARGET)
+	};
+
+	dl::ITextureView* cam_dsv = cam.depth_buffer->GetDefaultView(dl::TEXTURE_VIEW_DEPTH_STENCIL);
+
+	Imm->SetRenderTargets(_countof(cam_rtvs), cam_rtvs, cam_dsv, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+	for (int i = 0; i < _countof(cam_rtvs); i++)
+	{
+		Imm->ClearRenderTarget(cam_rtvs[i], cam.clear_color, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+	}
+	Imm->ClearDepthStencil(cam_dsv, dl::CLEAR_DEPTH_FLAG, 1.f, 0, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+	dl::ITextureView* rtvs[] = { rtv };
+	Imm->SetRenderTargets(1, rtvs, dsv, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 		});
 }

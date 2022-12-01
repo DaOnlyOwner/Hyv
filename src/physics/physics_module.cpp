@@ -10,8 +10,12 @@ hyv::physics::physics_module::physics_module(flecs::world& world)
 		.member<float>("y")
 		.member<float>("z");
 
+	world.component<glm::vec2>()
+		.member<float>("theta")
+		.member<float>("phi");
+
 	world.component<transform>()
 		.member<glm::vec3>("position")
-		.member<glm::vec3>("rotation")
+		.member<glm::vec2>("rotation")
 		.member<glm::vec3>("scale");
 }

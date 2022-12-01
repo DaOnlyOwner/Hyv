@@ -121,7 +121,6 @@ std::vector<hyv::resource::static_mesh_bundle> hyv::resource::asset_loader::load
 		aiProcess_Triangulate |
 		aiProcess_GenNormals |
 		aiProcess_CalcTangentSpace |
-		aiProcess_FlipWindingOrder |
 		(options.optimize ? aiProcess_OptimizeMeshes : 0) |
 		(options.merge ? aiProcess_PreTransformVertices : 0)
 		;
@@ -152,10 +151,11 @@ hyv::resource::asset_loader::~asset_loader()
 	vbd.Name = "Global Vertex Buffer";
 	vbd.Usage = dl::USAGE_IMMUTABLE;
 	vbd.BindFlags = dl::BIND_VERTEX_BUFFER;
-	vbd.Size = m_vertices.size() + sizeof(vertex);
+	vbd.Size = m_vertices.size() * sizeof(vertex);
 	dl::BufferData vdata;
 	vdata.pData = m_vertices.data();
 	vdata.DataSize = vbd.Size;
+	HYV_INFO("StaticMesh vertices amount: {}, StaticMesh vertices bytes: {}", m_vertices.size(), m_vertices.size() * sizeof vertex);
 	Dev->CreateBuffer(vbd, &vdata, &mb->vertex_buffer);
 
 	dl::BufferDesc ibd;
@@ -166,6 +166,8 @@ hyv::resource::asset_loader::~asset_loader()
 	dl::BufferData idata;
 	idata.pData = m_indices.data();
 	idata.DataSize = ibd.Size;
+	HYV_INFO("StaticMesh indices amount: {}, StaticMesh indices bytes: {}", m_indices.size(), m_indices.size() * sizeof vertex);
+
 	Dev->CreateBuffer(ibd, &idata, &mb->index_buffer);
 
 	m_res.get_world().modified<rendering::global_mesh_buffer>();

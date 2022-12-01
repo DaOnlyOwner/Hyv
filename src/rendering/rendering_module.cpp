@@ -1,8 +1,9 @@
 #include "rendering/rendering_module.h"
 #include "rendering/render_systems.h"
 #include "rendering/rendering_components.h"
-#include "global.h"
 #include "rendering/buffer.h"
+#include "rendering/rendering.h"
+#include "global.h"
 #include <string>
 #include "logging.h"
 
@@ -48,25 +49,38 @@ namespace
     }
 }
 
+void hyv::rendering::rendering_module::observe_main_camera(flecs::world& world)
+{
+    world.observer<MainCameraTag>().event(flecs::OnSet).each([&](flecs::entity e, MainCameraTag tag) {
+
+        int camera_count = 0;
+    world.filter<camera, MainCameraTag>().each([&](camera& cam, MainCameraTag tag2) {
+        camera_count++;
+    if (camera_count > 1)
+    {
+        HYV_NON_FATAL_ERROR("Cameras with tag MainCameraTag > 1")
+            return;
+    }
+    auto bundle = e.world().get_mut<composite_pass_pipeline_bundle>();
+    bundle->SRB->GetVariableByName(dl::SHADER_TYPE_PIXEL, "GBuffer_Normal")
+        ->Set(cam.normal_buffer->GetDefaultView(dl::TEXTURE_VIEW_SHADER_RESOURCE));
+        });
+        });
+}
+
+
 
 hyv::rendering::rendering_module::rendering_module(flecs::world& world)
 {
-	world.module<rendering_module>("StaticMeshRendererModule");
-	world.observer<camera>().event(flecs::OnSet).each([](flecs::entity e, camera& cam) {
-        init_camera(cam);
-		});
-    world.observer<main_camera>().event(flecs::OnSet).each([](flecs::entity e, main_camera& cam) {
-        init_camera(cam.cam);
-        auto bundle = e.world().get_mut<composite_pass_pipeline_bundle>();
-        bundle->SRB->GetVariableByName(dl::SHADER_TYPE_PIXEL, "GBuffer_Normal")
-        ->Set(cam.cam.normal_buffer->GetDefaultView(dl::TEXTURE_VIEW_SHADER_RESOURCE));
+    world.module<rendering_module>("StaticMeshRendererModule");
+    observe_and_init_cameras(world);
+    observe_main_camera(world);
+    create_geometry_pass_system(world);
+    create_composite_pass_system(world);
+    world.system<>("ImGuiRenderPassSystem").iter([](flecs::iter it) {
+        rendering::inst().render_imgui();
         });
 
-
-
-	create_geometry_pass_system(world);
-    create_composite_pass_system(world);
-    
     /*geometry_pass_constants_vector v;
     v.reserve(DeferredCtxts.size());
     for (int i = 0; i < DeferredCtxts.size(); i++)
@@ -75,6 +89,24 @@ hyv::rendering::rendering_module::rendering_module(flecs::world& world)
     }*/
 
 
+    init_geometry_pass(world);
+    init_composite_pass(world);
+}
+
+void hyv::rendering::rendering_module::init_composite_pass(flecs::world& world)
+{
+    composite_pass_pipeline_bundle pbundle;
+    shader cvs(shader_type::Vertex, SHADER_RES "/rendering/composite_vs.hlsl", "Composite Pass Vertex Shader");
+    shader cps(shader_type::Pixel, SHADER_RES "/rendering/composite_ps.hlsl", "Composite Pass Pixel Shader");
+    cvs.ok();
+    cps.ok();
+    pbundle.pso.setup_composite_pass(cvs, cps, nullptr, 0);
+    pbundle.SRB = pbundle.pso.create_srb();
+    world.set<composite_pass_pipeline_bundle>(std::move(pbundle));
+}
+
+void hyv::rendering::rendering_module::init_geometry_pass(flecs::world& world)
+{
     geometry_pass_pipeline_bundle gbundle;
     shader gvs(shader_type::Vertex, SHADER_RES "/rendering/geometry_vs.hlsl", "Geometry Pass Vertex Shader");
     shader gps(shader_type::Pixel, SHADER_RES "/rendering/geometry_ps.hlsl", "Geometry Pass Pixel Shader");
@@ -86,16 +118,12 @@ hyv::rendering::rendering_module::rendering_module(flecs::world& world)
     gbundle.pso.get_handle()->GetStaticVariableByName(dl::SHADER_TYPE_VERTEX, "mesh_consts")
         ->Set(gbundle.consts.get_buffer());
     gbundle.pso.get_handle()->InitializeStaticSRBResources(gbundle.SRB);
-
-    composite_pass_pipeline_bundle pbundle;
-    shader cvs(shader_type::Vertex, SHADER_RES "/rendering/composite_vs.hlsl", "Composite Pass Vertex Shader");
-    shader cps(shader_type::Pixel, SHADER_RES "/rendering/composite_ps.hlsl", "Composite Pass Pixel Shader");
-    cvs.ok();
-    cps.ok();
-    pbundle.pso.setup_composite_pass(cvs, cps, nullptr, 0);
-    pbundle.SRB = pbundle.pso.create_srb();
-
-    // Set singletons
     world.set<geometry_pass_pipeline_bundle>(std::move(gbundle));
-    world.set<composite_pass_pipeline_bundle>(std::move(pbundle));
+}
+
+void hyv::rendering::rendering_module::observe_and_init_cameras(flecs::world& world)
+{
+    world.observer<camera>().event(flecs::OnSet).each([](flecs::entity e, camera& cam) {
+        init_camera(cam);
+        });
 }

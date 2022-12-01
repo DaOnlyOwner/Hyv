@@ -29,13 +29,6 @@ namespace hyv
 			glm::mat4 projection;
 		};
 
-		// This is needed because I can't iterate over cameras in a multithreaded system
-		// So I render the objects to the MainCamera multithreaded, but all other cameras are singlethreaded
-		struct main_camera
-		{
-			camera cam;
-		};
-
 		struct geometry_pass_constants
 		{
 			glm::mat4 model; // 4x4 * sizeof(float) = 16 * 4
@@ -64,6 +57,7 @@ namespace hyv
 			dl::RefCntAutoPtr<dl::IBuffer> index_buffer;
 		};
 
+		struct MainCameraTag {};
 
 	}
 }

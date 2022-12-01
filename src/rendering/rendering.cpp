@@ -72,21 +72,19 @@ hyv::rendering::rendering::rendering(const init_info& info, windowing::windowing
 
 void hyv::rendering::rendering::new_frame(float* clear_color)
 {
-	auto* rtv = SwapChain->GetCurrentBackBufferRTV();
-	auto* dsv = SwapChain->GetDepthBufferDSV();
-	Imm->SetRenderTargets(1, &rtv, dsv, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-	Imm->ClearRenderTarget(SwapChain->GetCurrentBackBufferRTV(), clear_color, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-	Imm->ClearDepthStencil(SwapChain->GetDepthBufferDSV(), dl::CLEAR_DEPTH_FLAG, 1.f, 0, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+	float clear_color_[] = { 1,0,0,0 };
 	ImGui_ImplGlfw_NewFrame();
 	imguiImpl->NewFrame(SwapChain->GetDesc().Width, SwapChain->GetDesc().Height, SwapChain->GetDesc().PreTransform);
 }
 
 void hyv::rendering::rendering::end_frame()
 {
-	imguiImpl->Render(Imm);
+	auto* rtv = SwapChain->GetCurrentBackBufferRTV();
+	auto* dsv = SwapChain->GetDepthBufferDSV();
+	Imm->SetRenderTargets(1, &rtv, dsv, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 	Imm->Flush();
 	Imm->FinishFrame();
-	SwapChain->Present();
+	SwapChain->Present(0);
 }
 
 void hyv::rendering::rendering::touch() {
@@ -117,14 +115,15 @@ void hyv::rendering::rendering::init_diligent(GLFWwindow* window, const init_inf
 	//dl::SetDebugMessageCallback(callback);
 	hyv::DeferredCtxts.resize((std::max)(std::thread::hardware_concurrency() - 1, 1u));
 	std::vector<dl::IDeviceContext*> ctxts;
-	ctxts.reserve(hyv::DeferredCtxts.size() + 1);
-	ctxts.push_back(hyv::Imm);
+	ctxts.resize(hyv::DeferredCtxts.size() + 1);
+	/*ctxts.push_back(hyv::Imm);
 	for (int i = 0; i < hyv::DeferredCtxts.size(); i++)
 	{
 		ctxts.push_back(hyv::DeferredCtxts[i]);
-	}
+	}*/
 
 	dl::SwapChainDesc sdesc;
+	sdesc.DepthBufferFormat = dl::TEX_FORMAT_D32_FLOAT;
 	void* window_handle;
 #if PLATFORM_WIN32
 	window_handle = glfwGetWin32Window(window);
@@ -140,13 +139,12 @@ void hyv::rendering::rendering::init_diligent(GLFWwindow* window, const init_inf
 	{
 		auto getVk = dl::LoadGraphicsEngineVk();
 		dl::EngineVkCreateInfo vkCi;
+		vkCi.EnableValidation = info.enableDebugLayers;
 		if (info.enableDebugLayers)
 		{
-			vkCi.EnableValidation = info.enableDebugLayers;
 			vkCi.SetValidationLevel(dl::VALIDATION_LEVEL_2);
 		}
 		vkCi.NumDeferredContexts = DeferredCtxts.size();
-
 		//vkCi.NumImmediateContexts = 1;
 		auto* vkFactory = getVk();
 		vkFactory->SetMessageCallback(callback);
@@ -160,9 +158,9 @@ void hyv::rendering::rendering::init_diligent(GLFWwindow* window, const init_inf
 	{
 		auto getD3 = dl::LoadGraphicsEngineD3D12();
 		dl::EngineD3D12CreateInfo D3Ci;
+		D3Ci.EnableValidation = info.enableDebugLayers;
 		if (info.enableDebugLayers)
 		{
-			D3Ci.EnableValidation = info.enableDebugLayers;
 			D3Ci.SetValidationLevel(dl::VALIDATION_LEVEL_2);
 		}
 		D3Ci.NumDeferredContexts = DeferredCtxts.size();
@@ -184,6 +182,7 @@ void hyv::rendering::rendering::init_diligent(GLFWwindow* window, const init_inf
 		DeferredCtxts[i - 1] = ctxts[i];
 	}
 
+	CmdLists.resize(DeferredCtxts.size());
 	//Renderer::Inst().Init(device, imm, swapChain,streamFactory);
 	imguiImpl = std::make_unique<dl::ImGuiImplDiligent>(Dev, SwapChain->GetDesc().ColorBufferFormat, SwapChain->GetDesc().DepthBufferFormat);
 }

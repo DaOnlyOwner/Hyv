@@ -43,6 +43,7 @@ hyv::rendering::graphics_pipeline& hyv::rendering::graphics_pipeline::setup_comp
     m_ci.GraphicsPipeline.PrimitiveTopology = dl::PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     m_ci.GraphicsPipeline.NumRenderTargets = 1;
     m_ci.GraphicsPipeline.RTVFormats[0] = SwapChain->GetDesc().ColorBufferFormat;
+    m_ci.GraphicsPipeline.DSVFormat = SwapChain->GetDesc().DepthBufferFormat;
     m_ci.GraphicsPipeline.DepthStencilDesc.DepthEnable = false;
     m_ci.GraphicsPipeline.DepthStencilDesc.DepthWriteEnable = false;
     m_ci.GraphicsPipeline.RasterizerDesc.CullMode = dl::CULL_MODE_NONE;

@@ -18,6 +18,12 @@ namespace hyv
 			void new_frame();
 			void end_frame();
 			float delta_time();
+			glm::vec2 get_mouse_pos(){
+				double px, py;
+				glfwGetCursorPos(m_glfw_window, &px, &py);
+				return { px,py };
+			}
+	
 			~windowing();
 			GLFWwindow* get_window() { return m_glfw_window; }
 			static windowing& inst(const init_info&); 

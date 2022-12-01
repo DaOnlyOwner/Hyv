@@ -23,7 +23,7 @@ namespace hyv
 			~rendering();
 			static rendering& inst(const init_info& info, windowing::windowing& w);
 			static rendering& inst();
-
+			void render_imgui() { imguiImpl->Render(Imm); }
 			int num_threads() { return DeferredCtxts.size(); }
 
 		private:
