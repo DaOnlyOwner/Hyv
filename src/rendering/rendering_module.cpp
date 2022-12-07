@@ -1,8 +1,10 @@
 #include "rendering/rendering_module.h"
 #include "rendering/render_systems.h"
 #include "rendering/rendering_components.h"
+#include "rendering/rendering.h"
 #include "rendering/buffer.h"
 #include "rendering/rendering.h"
+#include "windowing/windowing.h"
 #include "global.h"
 #include <string>
 #include "logging.h"
@@ -72,7 +74,13 @@ void hyv::rendering::rendering_module::observe_main_camera(flecs::world& world)
 
 hyv::rendering::rendering_module::rendering_module(flecs::world& world)
 {
-    world.module<rendering_module>("StaticMeshRendererModule");
+    world.module<rendering_module>("RendererModule");
+    const auto& info = *world.get_mut<init_info>();
+    
+    auto& win = windowing::windowing::inst(info);
+    auto& ren = rendering::inst(info, win);
+
+
     observe_and_init_cameras(world);
     observe_main_camera(world);
     create_geometry_pass_system(world);
@@ -81,12 +89,6 @@ hyv::rendering::rendering_module::rendering_module(flecs::world& world)
         rendering::inst().render_imgui();
         });
 
-    /*geometry_pass_constants_vector v;
-    v.reserve(DeferredCtxts.size());
-    for (int i = 0; i < DeferredCtxts.size(); i++)
-    {
-        v.push_back(uniform_buffer<geometry_pass_constants>(std::string("Geometry Pass Per Mesh Constants ") + std::to_string(i)));
-    }*/
 
 
     init_geometry_pass(world);
@@ -107,6 +109,16 @@ void hyv::rendering::rendering_module::init_composite_pass(flecs::world& world)
 
 void hyv::rendering::rendering_module::init_geometry_pass(flecs::world& world)
 {
+
+    auto& info = *world.get_mut<init_info>();
+    
+    // Contains model matrices for objects
+    //static_obj_models_buffer obj_model_matrices("Object Model Matrix", info.num_static_objs);
+    //indirect_draws_buffer indirect_draws("Indirect Draws", info.num_static_objs, dl::BIND_INDIRECT_DRAW_ARGS);
+
+    //world.set<static_obj_models_buffer>(obj_model_matrices);
+    //world.set<indirect_draws_buffer>(indirect_draws);
+
     geometry_pass_pipeline_bundle gbundle;
     shader gvs(shader_type::Vertex, SHADER_RES "/rendering/geometry_vs.hlsl", "Geometry Pass Vertex Shader");
     shader gps(shader_type::Pixel, SHADER_RES "/rendering/geometry_ps.hlsl", "Geometry Pass Pixel Shader");

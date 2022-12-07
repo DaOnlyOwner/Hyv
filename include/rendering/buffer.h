@@ -17,141 +17,166 @@ namespace hyv
 		/// Right now, there is no way to delete data
 		/// </summary>
 		/// <typeparam name="T">The type of the buffer</typeparam>
-		//template<typename T>
-		//class struct_buffer
-		//{
-		//private:
-		//	struct_buffer(const std::string& name, dl::BIND_FLAGS bind, u64 size, u64 capacity)
-		//		:name(name), bind(bind), size(size), capacity(size) {}
-		//public:
-		//	struct_buffer() = default;
-		//	struct_buffer(const std::string& name, const ArrayRef<T>& a, dl::BIND_FLAGS bind = dl::BIND_FLAGS::BIND_SHADER_RESOURCE)
-		//		:struct_buffer(name, bind, a.size, a.size)
-		//	{
-		//		auto desc = get_desc();
-		//		dl::BufferData data;
-		//		data.DataSize = a.size * sizeof(T);
-		//		data.pData = a.data;
-		//		dataInRam.assign(a.data, a.data + a.size);
-		//		Dev->CreateBuffer(desc, &data, &bufferHandle);
-		//	}
+		template<typename T>
+		class struct_buffer
+		{
+		private:
+			struct_buffer(const std::string& name, dl::BIND_FLAGS bind, u64 size, u64 capacity)
+				:name(name), bind(bind), size(size), capacity(size) {}
+		public:
+			struct_buffer() = default;
+			struct_buffer(const std::string& name, const T* a, int a_size, dl::BIND_FLAGS bind = dl::BIND_FLAGS::BIND_SHADER_RESOURCE)
+				:struct_buffer(name, a, a_size, a_size, bind)
+			{ }
 
-		//	struct_buffer(const std::string& name, u64 capacity, dl::BIND_FLAGS bind = dl::BIND_FLAGS::BIND_SHADER_RESOURCE)
-		//		:struct_buffer(name, bind, 0, capacity)
-		//	{
-		//		auto desc = get_desc();
-		//		Dev->CreateBuffer(desc, nullptr, &bufferHandle);
-		//	}
-		//	struct_buffer(const std::string& name, dl::BIND_FLAGS bind = dl::BIND_FLAGS::BIND_SHADER_RESOURCE)
-		//		:name(name), bind(bind), capacity(0), size(0)
-		//	{}
+			struct_buffer(const std::string& name, const T* a, int a_size, int capacity, dl::BIND_FLAGS bind = dl::BIND_FLAGS::BIND_SHADER_RESOURCE)
+				:struct_buffer(name, bind, a_size, capacity)
+			{
+				auto desc = get_desc();
+				dl::BufferData data;
+				data.DataSize = a_size * sizeof(T);
+				data.pData = a.data;
+				dataInRam.assign(a.data, a.data + a_size);
+				Dev->CreateBuffer(desc, &data, &bufferHandle);
+			}
 
-		//	dl::IBuffer* operator ->()
-		//	{
-		//		return bufferHandle.RawPtr();
-		//	}
+			struct_buffer(const std::string& name, u64 capacity, dl::BIND_FLAGS bind = dl::BIND_FLAGS::BIND_SHADER_RESOURCE)
+				:struct_buffer(name, bind, 0, capacity)
+			{
+				auto desc = get_desc();
+				Dev->CreateBuffer(desc, nullptr, &bufferHandle);
+			}
+			struct_buffer(const std::string& name, dl::BIND_FLAGS bind = dl::BIND_FLAGS::BIND_SHADER_RESOURCE)
+				:name(name), bind(bind), capacity(0), size(0)
+			{}
 
-		//	bool add(const ArrayRef<T>& a, float growth = 1.f)
-		//	{
-		//		bool newBufferHandle = false;
-		//		if (size + a.size >= capacity)
-		//		{
-		//			grow(std::ceil((a.size + size) * growth));
-		//			newBufferHandle = true;
-		//		}
+			dl::IBuffer* operator ->()
+			{
+				return bufferHandle.RawPtr();
+			}
 
-		//		Imm->UpdateBuffer(bufferHandle, size * sizeof(T), a.size * sizeof(T), a.data, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-		//		size = a.size + size;
+			bool add(const T* a, int a_size, float growth = 1.f)
+			{
+				bool newBufferHandle = false;
 
-		//		dataInRam.insert(dataInRam.end(), a.data, a.data + a.size);
-		//		return newBufferHandle;
-		//	}
+				int i;
+				// TODO: Optimize for adjacent slots
+				for (i = 0; i < a_size; i++)
+				{
+					const T* obj = a[i];
+					if (free_slots.empty()) break;
+					u32 slot = free_slots.pop_back();
+					update(slot, *obj);
+				}
 
-		//	void update(u64 idx, const T& val)
-		//	{
-		//		Imm->UpdateBuffer(bufferHandle, idx * sizeof(T), sizeof(T), &val, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-		//		dataInRam[idx] = val;
-		//	}
+				const T* rest = a + i;
+				int rest_size = a_size - i;
 
-		//	const T& operator[](u64 idx)
-		//	{
-		//		return dataInRam[idx];
-		//	}
+				if (rest_size == 0) return false;
 
-		//	dl::IBuffer* get_buffer()
-		//	{
-		//		return bufferHandle.RawPtr();
-		//	}
+				if (dataInRam.size() + rest_size >= capacity)
+				{
+					grow(std::ceil((rest_size + dataInRam.size()) * growth));
+					newBufferHandle = true;
+				}
 
-		//	// This should not be used frequently
-		//	std::pair<u64, u64> remove(u64 pos)
-		//	{
-		//		std::swap(dataInRam.back(), dataInRam.data + pos);
-		//		dataInRam.pop_back();
-		//		bufferHandle.Release();
-		//		dl::BufferData bdata;
-		//		bdata.DataSize = dataInRam.size() * sizeof(T);
-		//		bdata.pData = dataInRam.data();
-		//		Dev->CreateBuffer(get_desc(), bdata, &bufferHandle);
-		//		return { dataInRam.size(),pos };
-		//	}
+				Imm->UpdateBuffer(bufferHandle, dataInRam.size() * sizeof(T), rest_size * sizeof(T), rest, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
 
-		//	void reserve(u64 amount)
-		//	{
-		//		if (amount > size)
-		//		{
-		//			grow(amount);
-		//		}
-		//	}
+				dataInRam.insert(dataInRam.end(), rest, rest + rest_size);
+				return newBufferHandle;
+			}
 
-		//	u64 get_size()
-		//	{
-		//		return size;
-		//	}
+			void update(u64 idx, const T& val)
+			{
+				Imm->UpdateBuffer(bufferHandle, idx * sizeof(T), sizeof(T), &val, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+				dataInRam[idx] = val;
+			}
 
-		//	u64 get_capacity()
-		//	{
-		//		return capacity;
-		//	}
+			const T& operator[](u64 idx)
+			{
+				return dataInRam[idx];
+			}
 
-		//private:
+			dl::IBuffer* get_buffer()
+			{
+				return bufferHandle.RawPtr();
+			}
 
-		//	dl::BufferDesc get_desc()
-		//	{
-		//		dl::BufferDesc desc;
-		//		desc.Mode = dl::BUFFER_MODE_STRUCTURED;
-		//		desc.Size = capacity * sizeof(T);
-		//		desc.Name = name.c_str();
-		//		desc.ElementByteStride = sizeof(T);
-		//		desc.BindFlags = bind;
-		//		return desc;
-		//	}
+			bool remove(u64 pos)
+			{
+				/*std::swap(dataInRam.back(), dataInRam.data + pos);
+				dataInRam.pop_back();
+				bufferHandle.Release();
+				dl::BufferData bdata;
+				bdata.DataSize = dataInRam.size() * sizeof(T);
+				bdata.pData = dataInRam.data();
+				Dev->CreateBuffer(get_desc(), bdata, &bufferHandle);
+				return { dataInRam.size(),pos };*/
+				
+				if (pos >= dataInRam.size()) return false;
+				free_slots.push_back(pos);
+			}
 
-		//	void grow(u64 newCapacity)
-		//	{
-		//		//u64 oldCapacity = capacity;
-		//		capacity = newCapacity;
-		//		auto desc = get_desc();
-		//		RefCntAutoPtr<dl::IBuffer> newBuffer;
-		//		Dev->CreateBuffer(desc, nullptr, &newBuffer);
-		//		if (size > 0)
-		//		{
-		//			Imm->CopyBuffer(bufferHandle, 0, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
-		//				newBuffer, 0, size * sizeof(T), dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
-		//		}
-		//		dataInRam.reserve(newCapacity);
-		//		bufferHandle = newBuffer;
-		//	}
+			void reserve(u64 amount)
+			{
+				if (amount > size)
+				{
+					grow(amount);
+				}
+			}
 
-		//private:
-		//	RefCntAutoPtr<dl::IBuffer> bufferHandle;
-		//	std::vector<T> dataInRam;
-		//	u64 size = 0;
-		//	u64 capacity = 0;
-		//	std::string name;
-		//	dl::BIND_FLAGS bind;
+			u64 get_size()
+			{
+				return size;
+			}
 
-		//};
+			u64 get_capacity()
+			{
+				return capacity;
+			}
+
+		private:
+
+			dl::BufferDesc get_desc()
+			{
+				dl::BufferDesc desc;
+				desc.Mode = dl::BUFFER_MODE_STRUCTURED;
+				desc.Size = capacity * sizeof(T);
+				desc.Name = name.c_str();
+				desc.ElementByteStride = sizeof(T);
+				desc.BindFlags = bind;
+				return desc;
+			}
+
+			void grow(u64 newCapacity)
+			{
+				//u64 oldCapacity = capacity;
+				capacity = newCapacity;
+				auto desc = get_desc();
+				
+				dl::BufferData bd;
+				bd.DataSize = dataInRam.size() * sizeof(T);
+				bd.pData = dataInRam.data();
+				dl::RefCntAutoPtr<dl::IBuffer> newBuffer;
+				Dev->CreateBuffer(desc, bd, &newBuffer);
+				/*if (size > 0)
+				{
+					Imm->CopyBuffer(bufferHandle, 0, dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION,
+						newBuffer, 0, size * sizeof(T), dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+				}*/
+				dataInRam.reserve(newCapacity);
+				bufferHandle = newBuffer;
+			}
+
+		private:
+			RefCntAutoPtr<dl::IBuffer> bufferHandle;
+			std::vector<T> dataInRam;
+			std::vector<u32> free_slots;
+			u64 capacity = 0;
+			std::string name;
+			dl::BIND_FLAGS bind;
+
+		};
 
 		template<typename T>
 		class uniform_buffer

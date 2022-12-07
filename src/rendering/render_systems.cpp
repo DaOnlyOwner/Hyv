@@ -5,7 +5,6 @@
 #include "resource/resource_components.h"
 #include "physics/physics_components.h"
 #include "physics/physics_tools.h"
-#include "logging.h"
 #include "MapHelper.hpp"
 
 

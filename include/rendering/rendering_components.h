@@ -36,8 +36,27 @@ namespace hyv
 			glm::mat4 MVP; // 4 * 4  = 16 * 4  
 		};
 
+		struct draw_indirect_command
+		{
+			u32 num_indices;
+			u32 num_instances;
+			u32 first_index_location;
+			u32 base_vertex;
+			u32 first_instance_location;
+		};
+
+		struct model_normal_bundle
+		{
+			glm::mat4 model;
+			glm::mat4 normal;
+		};
+
+		typedef struct_buffer<model_normal_bundle> object_data_buffer;
+		typedef struct_buffer<draw_indirect_command> indirect_draws_buffer;
+		
 		typedef std::vector<uniform_buffer<geometry_pass_constants>> geometry_pass_constants_vector;
 
+		
 		struct geometry_pass_pipeline_bundle
 		{
 			graphics_pipeline pso;
