@@ -12,7 +12,7 @@ hyv::rendering::graphics_pipeline& hyv::rendering::graphics_pipeline::setup_geom
     m_ci.GraphicsPipeline.RasterizerDesc.CullMode = dl::CULL_MODE_BACK;
     m_ci.GraphicsPipeline.DepthStencilDesc.DepthEnable = true;
     m_ci.GraphicsPipeline.DepthStencilDesc.DepthWriteEnable = true;
-    m_ci.PSODesc.ResourceLayout.DefaultVariableType = dl::SHADER_RESOURCE_VARIABLE_TYPE_STATIC;
+    m_ci.PSODesc.ResourceLayout.DefaultVariableType = dl::SHADER_RESOURCE_VARIABLE_TYPE_DYNAMIC;
     m_ci.pVS = vs.get_shader_handle();
     m_ci.pPS = ps.get_shader_handle();
     if (descs != nullptr)
@@ -31,7 +31,7 @@ hyv::rendering::graphics_pipeline& hyv::rendering::graphics_pipeline::setup_geom
     m_ci.GraphicsPipeline.InputLayout.NumElements = _countof(elems);
     m_ci.PSODesc.Name = "Geometry Pass Pipeline";
 
-    create();
+    create_pso();
     return *this;
 }
 
@@ -56,12 +56,6 @@ hyv::rendering::graphics_pipeline& hyv::rendering::graphics_pipeline::setup_comp
     }
     m_ci.PSODesc.Name = "Composite Pass Pipeline";
 
-    create();
+    create_pso();
     return *this;
-}
-
-dl::RefCntAutoPtr<dl::IShaderResourceBinding> hyv::rendering::graphics_pipeline::create_srb() {
-    dl::RefCntAutoPtr<dl::IShaderResourceBinding> binding;
-    pipeline_handle->CreateShaderResourceBinding(&binding);
-    return binding;
 }

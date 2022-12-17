@@ -5,6 +5,7 @@
 #include "rendering/rendering.h"
 #include "rendering/rendering_module.h"
 #include "rendering/rendering_components.h"
+#include "rendering/static_scene_guard.h"
 #include "physics/physics_components.h"
 #include "physics/physics_module.h"
 #include "physics/physics_tools.h"
@@ -35,11 +36,11 @@ int main()
 	auto& win = hyv::windowing::windowing::inst(info);
 	auto& ren = hyv::rendering::rendering::inst(info, win);
 
-	//world.import<flecs::monitor>();
+	world.import<flecs::monitor>();
 	world.import<hyv::rendering::rendering_module>();
 	world.import<hyv::physics::physics_module>();
 
-	//world.set<flecs::Rest>({});
+	world.set<flecs::Rest>({});
 	{
 		hyv::resource::asset_loader loader(res);
 		hyv::resource::static_mesh_loader_options options;
@@ -47,15 +48,17 @@ int main()
 		options.pretransform = true;
 		auto bundles = loader.load_static_mesh(RES"/models/sponza/sponza.obj", options);
 
-
-		for (int i = 0; i < 100; i++)
 		{
-			for (auto& bundle : bundles)
+			rendering::static_scene_guard guard(world);
+			for (int i = 0; i < 100; i++)
 			{
-				world.entity()
-					.set<hyv::resource::static_mesh_gpu>(bundle.gpu_)
-					.set<hyv::physics::transform>({})
-					.set<hyv::resource::material>({});
+				for (auto& bundle : bundles)
+				{
+					world.entity()
+						.set<hyv::resource::static_mesh_gpu>(bundle.gpu_)
+						.set<hyv::physics::transform>({})
+						.set<hyv::resource::material>({});
+				}
 			}
 		}
 	}
@@ -73,7 +76,7 @@ int main()
 		.set<hyv::physics::transform>(cam_trans)
 		.add<hyv::rendering::MainCameraTag>();
 	
-	world.set_threads(ren.num_threads());
+	//world.set_threads(ren.num_threads());
 	//world.set_target_fps(60);
 	
 	glm::vec2 mousePos = win.get_mouse_pos();

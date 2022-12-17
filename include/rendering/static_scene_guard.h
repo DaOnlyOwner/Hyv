@@ -1,5 +1,6 @@
 #pragma once
 #include "flecs.h"
+#include "rendering/pipeline.h"
 
 namespace hyv
 {
@@ -13,6 +14,7 @@ namespace hyv
 
 		private:
 			flecs::world& m_world;
+			graphics_pipeline init_static_geometry_pso();
 
 		};
 	}

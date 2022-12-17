@@ -1,8 +1,12 @@
-struct GeometryPassVSPerMeshConstants
+struct ObjectData
 {
     float4x4 model;
     float4x4 normal;
-    float4x4 MVP;
+};
+
+struct VPMatrix
+{
+    float4x4 VP;
 };
 
 struct VSInput
@@ -23,13 +27,16 @@ struct PSInput
     //nointerpolation uint matIdx : MAT_IDX;
 };
 
-ConstantBuffer<GeometryPassVSPerMeshConstants> mesh_consts;
+StructuredBuffer<ObjectData> objs_data;
+ConstantBuffer<VPMatrix> VP;
 
-void main(in VSInput VSIn, out PSInput PSIn)
+void main(in VSInput VSIn, out PSInput PSIn, int instId : SV_InstanceID)
 {
-    PSIn.wpos = mul(float4(VSIn.pos.xyz,1.0),mesh_consts.model);
-    PSIn.pos = mul(float4(VSIn.pos.xyz,1.0),mesh_consts.MVP);
-    PSIn.normal = mul(float4(VSIn.normal.xyz,1.0),mesh_consts.normal).xyz;
+    ObjectData data = objs_data[instId];
+    float4x4 MVP = VP.VP * data.model;
+    PSIn.wpos = mul(float4(VSIn.pos.xyz,1.0),data.model);
+    PSIn.pos = mul(float4(VSIn.pos.xyz,1.0),MVP);
+    PSIn.normal = mul(float4(VSIn.normal.xyz,1.0),data.normal).xyz;
     PSIn.uv = VSIn.uv.xy;
     //PSIn.matIdx = geomConst.matIdx;
 }

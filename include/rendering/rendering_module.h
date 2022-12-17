@@ -13,9 +13,6 @@ namespace hyv
 
 			void init_composite_pass(flecs::world& world);
 
-			void init_geometry_pass(flecs::world& world);
-
-
 		private:
 			void observe_and_init_cameras(flecs::world& world);
 			void observe_main_camera(flecs::world& world);

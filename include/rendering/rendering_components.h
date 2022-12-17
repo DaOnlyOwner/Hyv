@@ -19,10 +19,19 @@ namespace hyv
 
 		struct camera
 		{
+			struct View
+			{
+				glm::mat4 VP;
+				glm::vec4 eyePos;
+				glm::vec4 viewDir;
+				glm::vec4 padding1;
+				glm::vec4 padding2;
+			};
+
 			dl::RefCntAutoPtr<dl::ITexture> albedo_buffer;
 			dl::RefCntAutoPtr<dl::ITexture> normal_buffer;
 			dl::RefCntAutoPtr<dl::ITexture> depth_buffer;
-			//uniform_buffer<camera_constants> constants;
+			uniform_buffer<View> constants;
 
 			int width, height;
 			float clear_color[4] = { 0,0,0,1 };
@@ -51,7 +60,6 @@ namespace hyv
 			glm::mat4 normal;
 		};
 
-		typedef struct_buffer<model_normal_bundle> object_data_buffer;
 		typedef struct_buffer<draw_indirect_command> indirect_draws_buffer;
 		
 		typedef std::vector<uniform_buffer<geometry_pass_constants>> geometry_pass_constants_vector;
@@ -59,15 +67,20 @@ namespace hyv
 		
 		struct geometry_pass_pipeline_bundle
 		{
+
+			struct VPMatrix
+			{
+				glm::mat4 VP;
+			};
+
 			graphics_pipeline pso;
-			dl::RefCntAutoPtr<dl::IShaderResourceBinding> SRB;
-			uniform_buffer<geometry_pass_constants> consts;
+			struct_buffer<model_normal_bundle> static_objects_data_buffer;
+			uniform_buffer<VPMatrix> view;
 		};
 
 		struct composite_pass_pipeline_bundle
 		{
 			graphics_pipeline pso;
-			dl::RefCntAutoPtr<dl::IShaderResourceBinding> SRB;
 		};
 
 		struct global_mesh_buffer

@@ -21,8 +21,8 @@ namespace hyv
 		class struct_buffer
 		{
 		private:
-			struct_buffer(const std::string& name, dl::BIND_FLAGS bind, u64 size, u64 capacity)
-				:name(name), bind(bind), size(size), capacity(size) {}
+			struct_buffer(const std::string& name, dl::BIND_FLAGS bind, u64 capacity)
+				:name(name), bind(bind), capacity(capacity) {}
 		public:
 			struct_buffer() = default;
 			struct_buffer(const std::string& name, const T* a, int a_size, dl::BIND_FLAGS bind = dl::BIND_FLAGS::BIND_SHADER_RESOURCE)
@@ -30,24 +30,24 @@ namespace hyv
 			{ }
 
 			struct_buffer(const std::string& name, const T* a, int a_size, int capacity, dl::BIND_FLAGS bind = dl::BIND_FLAGS::BIND_SHADER_RESOURCE)
-				:struct_buffer(name, bind, a_size, capacity)
+				:struct_buffer(name, bind, capacity)
 			{
 				auto desc = get_desc();
 				dl::BufferData data;
 				data.DataSize = a_size * sizeof(T);
-				data.pData = a.data;
-				dataInRam.assign(a.data, a.data + a_size);
+				data.pData = a;
+				dataInRam.assign(a, a + a_size);
 				Dev->CreateBuffer(desc, &data, &bufferHandle);
 			}
 
 			struct_buffer(const std::string& name, u64 capacity, dl::BIND_FLAGS bind = dl::BIND_FLAGS::BIND_SHADER_RESOURCE)
-				:struct_buffer(name, bind, 0, capacity)
+				:struct_buffer(name, bind, capacity)
 			{
 				auto desc = get_desc();
 				Dev->CreateBuffer(desc, nullptr, &bufferHandle);
 			}
 			struct_buffer(const std::string& name, dl::BIND_FLAGS bind = dl::BIND_FLAGS::BIND_SHADER_RESOURCE)
-				:name(name), bind(bind), capacity(0), size(0)
+				:name(name), bind(bind), capacity(0)
 			{}
 
 			dl::IBuffer* operator ->()
@@ -117,9 +117,17 @@ namespace hyv
 				free_slots.push_back(pos);
 			}
 
+			/*void compact()
+			{
+				for (auto& slot : free_slots)
+				{
+
+				}
+			}*/
+
 			void reserve(u64 amount)
 			{
-				if (amount > size)
+				if (amount > dataInRam.size())
 				{
 					grow(amount);
 				}
@@ -127,7 +135,7 @@ namespace hyv
 
 			u64 get_size()
 			{
-				return size;
+				return dataInRam.size();
 			}
 
 			u64 get_capacity()
@@ -169,7 +177,7 @@ namespace hyv
 			}
 
 		private:
-			RefCntAutoPtr<dl::IBuffer> bufferHandle;
+			dl::RefCntAutoPtr<dl::IBuffer> bufferHandle;
 			std::vector<T> dataInRam;
 			std::vector<u32> free_slots;
 			u64 capacity = 0;

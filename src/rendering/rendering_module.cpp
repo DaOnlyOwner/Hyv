@@ -64,7 +64,7 @@ void hyv::rendering::rendering_module::observe_main_camera(flecs::world& world)
             return;
     }
     auto bundle = e.world().get_mut<composite_pass_pipeline_bundle>();
-    bundle->SRB->GetVariableByName(dl::SHADER_TYPE_PIXEL, "GBuffer_Normal")
+    bundle->pso.get_srb()->GetVariableByName(dl::SHADER_TYPE_PIXEL, "GBuffer_Normal")
         ->Set(cam.normal_buffer->GetDefaultView(dl::TEXTURE_VIEW_SHADER_RESOURCE));
         });
         });
@@ -90,8 +90,6 @@ hyv::rendering::rendering_module::rendering_module(flecs::world& world)
         });
 
 
-
-    init_geometry_pass(world);
     init_composite_pass(world);
 }
 
@@ -103,34 +101,8 @@ void hyv::rendering::rendering_module::init_composite_pass(flecs::world& world)
     cvs.ok();
     cps.ok();
     pbundle.pso.setup_composite_pass(cvs, cps, nullptr, 0);
-    pbundle.SRB = pbundle.pso.create_srb();
+    pbundle.pso.init_srb();
     world.set<composite_pass_pipeline_bundle>(std::move(pbundle));
-}
-
-void hyv::rendering::rendering_module::init_geometry_pass(flecs::world& world)
-{
-
-    auto& info = *world.get_mut<init_info>();
-    
-    // Contains model matrices for objects
-    //static_obj_models_buffer obj_model_matrices("Object Model Matrix", info.num_static_objs);
-    //indirect_draws_buffer indirect_draws("Indirect Draws", info.num_static_objs, dl::BIND_INDIRECT_DRAW_ARGS);
-
-    //world.set<static_obj_models_buffer>(obj_model_matrices);
-    //world.set<indirect_draws_buffer>(indirect_draws);
-
-    geometry_pass_pipeline_bundle gbundle;
-    shader gvs(shader_type::Vertex, SHADER_RES "/rendering/geometry_vs.hlsl", "Geometry Pass Vertex Shader");
-    shader gps(shader_type::Pixel, SHADER_RES "/rendering/geometry_ps.hlsl", "Geometry Pass Pixel Shader");
-    gvs.ok();
-    gps.ok();
-    gbundle.pso.setup_geometry_pass(gvs, gps, nullptr, 0);
-    gbundle.SRB = gbundle.pso.create_srb();
-    gbundle.consts = uniform_buffer<geometry_pass_constants>("Geometric Constants");
-    gbundle.pso.get_handle()->GetStaticVariableByName(dl::SHADER_TYPE_VERTEX, "mesh_consts")
-        ->Set(gbundle.consts.get_buffer());
-    gbundle.pso.get_handle()->InitializeStaticSRBResources(gbundle.SRB);
-    world.set<geometry_pass_pipeline_bundle>(std::move(gbundle));
 }
 
 void hyv::rendering::rendering_module::observe_and_init_cameras(flecs::world& world)
