@@ -35,5 +35,5 @@ void main(in PSInput PSIn, out PSOutput PSOut)
     // else PSOut.Color = float4(0,0,0,0); 
     // PSOut.Norm = float4(normalize(PSIn.normal.xyz),0);
     PSOut.Color = PSIn.pos * PSIn.wpos * float4(PSIn.uv,1,1);
-    PSOut.Norm = float4(normalize(PSIn.normal.xyz),0);
+    PSOut.Norm = float4(normalize(PSIn.normal.xyz) * 0.0000001 + float4(PSIn.uv,1,1),0);
 }

@@ -47,5 +47,5 @@ float4 main(in PSInput PSIn) : SV_TARGET
 
 
     float3 normal = GBuffer_Normal.Load(texelPos).xyz;
-    return float4(normal,0);
+    return float4(normal, 0);
 }

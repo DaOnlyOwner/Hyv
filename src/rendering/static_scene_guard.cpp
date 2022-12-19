@@ -19,16 +19,15 @@ hyv::rendering::graphics_pipeline hyv::rendering::static_scene_guard::init_stati
 
 hyv::rendering::static_scene_guard::~static_scene_guard()
 {
-	std::vector<model_normal_bundle> model_matrices;
-	std::vector<draw_indirect_command> dics;
+	std::vector<std::pair<draw_indirect_command, model_normal_bundle>> dics_mn;
 	int count = 0;
 
 	m_world.query<const resource::static_mesh_gpu, const physics::transform>()
 		.each([&](flecs::entity e, const resource::static_mesh_gpu& sm, const physics::transform& trans)
 			{
 				auto [model, normal] = physics::get_model_normal(trans);
+				model = glm::transpose(model);
 				auto m_n = model_normal_bundle(model, normal);
-				model_matrices.push_back(m_n);
 
 				draw_indirect_command cmd;
 				cmd.base_vertex = sm.offsetVertex;
@@ -37,9 +36,23 @@ hyv::rendering::static_scene_guard::~static_scene_guard()
 				cmd.num_instances = 1;
 				cmd.first_instance_location = count++;
 				
-				dics.push_back(cmd);
+				dics_mn.push_back({ cmd,m_n });
 			});
 	
+
+	std::sort(dics_mn.begin(), dics_mn.end(), [](const auto& a, const auto& b) {return a.first.base_vertex < b.first.base_vertex; });
+
+	std::vector<draw_indirect_command> dics;
+	std::vector<model_normal_bundle> model_matrices;
+	dics.reserve(dics_mn.size());
+	model_matrices.reserve(dics_mn.size());
+
+	for (auto& a : dics_mn)
+	{
+		dics.push_back(a.first);
+		model_matrices.push_back(a.second);
+	}
+
 	struct_buffer<model_normal_bundle> objs_static("Object Data Static", model_matrices.data(), model_matrices.size(), dl::BIND_SHADER_RESOURCE);
 	indirect_draws_buffer draw_commands_static("Indirect Draw Commands Static", dics.data(), dics.size(), dl::BIND_INDIRECT_DRAW_ARGS);
 	

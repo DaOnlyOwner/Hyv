@@ -53,10 +53,13 @@ void hyv::rendering::create_geometry_pass_system(flecs::world& world)
 	//		//auto& consts = it.world().get_mut<geometry_pass_constants_vector>()[0][thread_id];
 	//		auto global_mb = it.world().get_mut<global_mesh_buffer>();
 	//		auto geom_pass_bundle = it.world().get_mut<geometry_pass_pipeline_bundle>();
-	//		ctxt->Begin(0);
+	//		//Imm->Begin(0);
 
 	//		dl::IBuffer* vbos[] = { global_mb->vertex_buffer.RawPtr() };
-	//		ctxt->SetIndexBuffer(global_mb->index_buffer.RawPtr(), 0, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+	//		Imm->SetIndexBuffer(global_mb->index_buffer.RawPtr(), 0, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+
+	//
+
 	//		auto camera_filter = it.world().filter_builder<camera, physics::transform>().with<MainCameraTag>().build();
 	//		camera_filter.each([&](camera& cam, physics::transform& trans_cam) {
 	//			dl::ITextureView* RTVs[] =
@@ -65,9 +68,16 @@ void hyv::rendering::create_geometry_pass_system(flecs::world& world)
 	//			cam.normal_buffer->GetDefaultView(dl::TEXTURE_VIEW_RENDER_TARGET)
 	//		};
 
-	//		dl::ITextureView* DSV = cam.depth_buffer->GetDefaultView(dl::TEXTURE_VIEW_DEPTH_STENCIL);
 
-	//		ctxt->SetRenderTargets(_countof(RTVs), RTVs, DSV, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
+	//		{
+	//			auto m = geom_pass_bundle->view.map();
+	//			m->VP = glm::transpose(cam.projection * physics::get_view(trans_cam));
+	//		}
+
+	//		dl::ITextureView* DSV = cam.depth_buffer->GetDefaultView(dl::TEXTURE_VIEW_DEPTH_STENCIL);
+	//		//geom_pass_bundle->pso.get_srb()->GetVariableByName(dl::SHADER_TYPE_VERTEX, "objs_data")->Set(geom_pass_bundle->static_objects_data_buffer.get_buffer()->GetDefaultView(dl::BUFFER_VIEW_SHADER_RESOURCE));
+
+	//		Imm->SetRenderTargets(_countof(RTVs), RTVs, DSV, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
 	//			
 	//		for (auto i : it)
 	//		{
@@ -76,18 +86,18 @@ void hyv::rendering::create_geometry_pass_system(flecs::world& world)
 	//			auto& mat = mat_ptr[i];
 	//			auto [model, normal] = physics::get_model_normal(trans);
 	//			
-	//			{
+	//			/*{
 	//				auto mapped = geom_pass_bundle->consts.map(ctxt.RawPtr());
 	//				auto view = physics::get_view(trans_cam);
 	//				auto MVP = glm::transpose(cam.projection * view * model);
 	//				mapped->model = model;
 	//				mapped->MVP = MVP;
 	//				mapped->normal = normal;
-	//			}
+	//			}*/
 
 	//			u64 offset[] = { sm.offsetVertex * sizeof(vertex) };
 	//			//HYV_INFO("{}", offset[0]);
-	//			ctxt->SetVertexBuffers(0, 1, vbos, offset, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY, dl::SET_VERTEX_BUFFERS_FLAG_RESET);
+	//			Imm->SetVertexBuffers(0, 1, vbos, offset, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY, dl::SET_VERTEX_BUFFERS_FLAG_RESET);
 	//			dl::DrawIndexedAttribs attribs;
 
 	//			attribs.IndexType = dl::VT_UINT32;
@@ -95,15 +105,15 @@ void hyv::rendering::create_geometry_pass_system(flecs::world& world)
 	//			attribs.Flags = dl::DRAW_FLAG_VERIFY_ALL;
 	//			attribs.FirstIndexLocation = sm.offsetIndex;
 
-	//			ctxt->SetPipelineState(geom_pass_bundle->pso.get_handle());
-	//			ctxt->CommitShaderResources(geom_pass_bundle->SRB, dl::RESOURCE_STATE_TRANSITION_MODE_VERIFY);
-	//			ctxt->DrawIndexed(attribs);
+	//			Imm->SetPipelineState(geom_pass_bundle->pso.get_handle());
+	//			Imm->CommitShaderResources(geom_pass_bundle->pso.get_srb(), dl::RESOURCE_STATE_TRANSITION_MODE_TRANSITION);
+	//			Imm->DrawIndexed(attribs);
 	//		}
 
 	//		});
-	//		dl::RefCntAutoPtr<dl::ICommandList> cmd_list;
+	//		/*dl::RefCntAutoPtr<dl::ICommandList> cmd_list;
 	//		ctxt->FinishCommandList(&cmd_list);
-	//		CmdLists[thread_id] = cmd_list;
+	//		CmdLists[thread_id] = cmd_list;*/
 
 	//		});
 
@@ -149,9 +159,6 @@ void hyv::rendering::create_geometry_pass_system(flecs::world& world)
 
 		});
 		});
-
-
-
 }
 
 void hyv::rendering::create_composite_pass_system(flecs::world& world)

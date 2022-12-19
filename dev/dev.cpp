@@ -36,11 +36,11 @@ int main()
 	auto& win = hyv::windowing::windowing::inst(info);
 	auto& ren = hyv::rendering::rendering::inst(info, win);
 
-	world.import<flecs::monitor>();
+	//world.import<flecs::monitor>();
 	world.import<hyv::rendering::rendering_module>();
 	world.import<hyv::physics::physics_module>();
 
-	world.set<flecs::Rest>({});
+	//world.set<flecs::Rest>({});
 	{
 		hyv::resource::asset_loader loader(res);
 		hyv::resource::static_mesh_loader_options options;

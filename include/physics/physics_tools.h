@@ -26,7 +26,7 @@ namespace hyv
 
 		inline std::pair<glm::mat4, glm::mat4> get_model_normal(const transform& trans)
 		{
-			glm::mat4 m{ 1.0 };
+			glm::mat4 m = glm::identity<glm::mat4>();
 			return { m,m };
 			auto translationM = glm::translate(m, trans.position);
 			auto rads = glm::radians(trans.rotation);

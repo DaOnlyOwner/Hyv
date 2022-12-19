@@ -30,13 +30,13 @@ struct PSInput
 StructuredBuffer<ObjectData> objs_data;
 ConstantBuffer<VPMatrix> VP;
 
-void main(in VSInput VSIn, out PSInput PSIn, int instId : SV_InstanceID)
+void main(in VSInput VSIn, out PSInput PSIn, uint instId : SV_InstanceID)
 {
     ObjectData data = objs_data[instId];
-    float4x4 MVP = VP.VP * data.model;
-    PSIn.wpos = mul(float4(VSIn.pos.xyz,1.0),data.model);
-    PSIn.pos = mul(float4(VSIn.pos.xyz,1.0),MVP);
-    PSIn.normal = mul(float4(VSIn.normal.xyz,1.0),data.normal).xyz;
-    PSIn.uv = VSIn.uv.xy;
+    float4x4 MVP = data.model * VP.VP;
+    PSIn.wpos = mul(float4(VSIn.pos.xyz, 1.0), data.model);
+    PSIn.pos = mul(float4(VSIn.pos.xyz, 1.0), MVP);
+    PSIn.normal = mul(float4(VSIn.normal.xyz, 1.0), VP.VP).xyz;
+    PSIn.uv = float2(instId,instId);
     //PSIn.matIdx = geomConst.matIdx;
 }
